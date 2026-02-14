@@ -6,6 +6,7 @@ import '../services/booking_service.dart';
 class BookingScreen extends StatefulWidget {
   final String movieTitle;
   final String showtime;
+  final String showDate;
   final String theatreName;
   final String selectedFormat;
   final String selectedLanguage;
@@ -14,6 +15,7 @@ class BookingScreen extends StatefulWidget {
     super.key,
     required this.movieTitle,
     required this.showtime,
+    required this.showDate,
     required this.theatreName,
     this.selectedFormat = '2D',
     this.selectedLanguage = 'English',
@@ -39,6 +41,7 @@ class _BookingScreenState extends State<BookingScreen> {
     final seats = await BookingService.getBookedSeats(
       widget.movieTitle,
       widget.theatreName,
+      widget.showDate,
       widget.showtime,
     );
     setState(() {
@@ -211,8 +214,15 @@ class _BookingScreenState extends State<BookingScreen> {
                             _selectedSeats.join(', '),
                           ),
                         ),
+                        Expanded(
+                          child: _summaryInfo(
+                            'DATE',
+                            _formatDate(widget.showDate),
+                          ),
+                        ),
                       ],
                     ),
+
                     const SizedBox(height: 20),
                     Row(
                       children: [
@@ -274,7 +284,8 @@ class _BookingScreenState extends State<BookingScreen> {
                               builder: (_) => PaymentScreen(
                                 movieTitle: widget.movieTitle,
                                 theatreName: widget.theatreName,
-                                dateAndTime: 'Feb 16, 2026 ${widget.showtime}',
+                                showDate: widget.showDate,
+                                showTime: widget.showtime,
                                 ticketCount: _selectedSeats.length,
                                 amount: total.toStringAsFixed(2),
                                 selectedSeats: _selectedSeats.toList(),
@@ -310,12 +321,34 @@ class _BookingScreenState extends State<BookingScreen> {
                   style: GoogleFonts.outfit(color: Colors.grey),
                 ),
               ),
-
             const SizedBox(height: 32),
           ],
         ),
       ),
     );
+  }
+
+  String _formatDate(String isoDate) {
+    try {
+      final date = DateTime.parse(isoDate);
+      final months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
+      return '${months[date.month - 1]} ${date.day.toString().padLeft(2, '0')}, ${date.year}';
+    } catch (e) {
+      return isoDate;
+    }
   }
 
   Widget _summaryInfo(String label, String value) {

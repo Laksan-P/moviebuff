@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/theme/app_colors.dart';
 import '../services/booking_service.dart';
+import '../services/auth_service.dart';
 import '../widgets/custom_button.dart';
 import 'cancel_booking_screen.dart';
 
@@ -26,8 +27,15 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
   }
 
   Future<void> _loadBookings() async {
-    final bookings = await BookingService.getBookings();
+    final userEmail = await AuthService.getUserEmail();
+    final bookings = await BookingService.getBookings(userEmail: userEmail);
     if (mounted) {
+      debugPrint('📑 MY BOOKINGS - Loaded ${bookings.length} bookings');
+      for (var b in bookings) {
+        debugPrint(
+          '  - ${b['movie']} (ID: ${b['id']}, Status: ${b['status']})',
+        );
+      }
       setState(() {
         _bookings = bookings;
         _isLoading = false;
@@ -44,11 +52,14 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
   @override
   Widget build(BuildContext context) {
     final activeBookings = _bookings
-        .where((b) => b['status'] == 'Confirmed')
+        .where(
+          (b) => b['status'].toString().trim().toLowerCase() == 'confirmed',
+        )
         .toList();
-    final cancelledBookings = _bookings
-        .where((b) => b['status'] == 'Cancelled')
-        .toList();
+    final cancelledBookings = _bookings.where((b) {
+      final s = b['status'].toString().trim().toLowerCase();
+      return s == 'cancelled' || s == 'cancellation requested';
+    }).toList();
 
     return Scaffold(
       backgroundColor: Colors.blueGrey[50],
@@ -129,7 +140,10 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
   }
 
   Widget _buildBookingCard(Map<String, dynamic> booking) {
-    final bool isCancelled = booking['status'] == 'Cancelled';
+    final status = booking['status'] ?? 'Unknown';
+    final statusLower = status.toLowerCase();
+    final bool isCancelled =
+        statusLower == 'cancelled' || statusLower == 'cancellation requested';
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -138,7 +152,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -176,7 +190,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                   'TOTAL AMOUNT',
                   style: GoogleFonts.outfit(
                     fontSize: 10,
-                    color: Colors.white.withValues(alpha: 0.6),
+                    color: Colors.white.withOpacity(0.6),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -194,16 +208,22 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                     Icon(
                       Icons.circle,
                       size: 8,
-                      color: isCancelled
+                      color: status.toLowerCase() == 'cancelled'
                           ? Colors.redAccent
+                          : status.toLowerCase() == 'cancellation requested'
+                          ? Colors.orangeAccent
                           : const Color(0xFF4ADE80),
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      booking['status'] ?? 'Unknown',
+                      status.toLowerCase() == 'cancellation requested'
+                          ? 'PENDING REFUND'
+                          : status.toUpperCase(),
                       style: GoogleFonts.outfit(
-                        color: isCancelled
+                        color: status.toLowerCase() == 'cancelled'
                             ? Colors.redAccent
+                            : status.toLowerCase() == 'cancellation requested'
+                            ? Colors.orangeAccent
                             : const Color(0xFF4ADE80),
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -320,7 +340,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => CancelBookingScreen(booking: booking)),
-    );
+    ).then((_) => _loadBookings());
   }
 
   Widget _buildInfoRow(String label, String value) {

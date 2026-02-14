@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
 import '../../services/movie_service.dart';
+import '../../services/theatre_service.dart';
 
 class AdminMoviesScreen extends StatefulWidget {
   const AdminMoviesScreen({super.key});
@@ -12,12 +13,27 @@ class AdminMoviesScreen extends StatefulWidget {
 
 class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
   List<Map<String, dynamic>> _movies = [];
+  List<Map<String, dynamic>> _theatres = [];
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadMovies();
+    _loadInitialData();
+  }
+
+  Future<void> _loadInitialData() async {
+    final results = await Future.wait([
+      MovieService.getMovies(),
+      TheatreService.getTheatres(),
+    ]);
+    if (mounted) {
+      setState(() {
+        _movies = results[0];
+        _theatres = results[1];
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _loadMovies() async {
@@ -25,7 +41,6 @@ class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
     if (mounted) {
       setState(() {
         _movies = movies;
-        _isLoading = false;
       });
     }
   }
@@ -50,6 +65,7 @@ class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
 
     String selectedRating = movie?['rating'] ?? 'PG-13';
     String selectedDateStr = movie?['releaseDate'] ?? '';
+    String? selectedTheatre = movie?['theatre'];
 
     List<String> selectedFormats = List<String>.from(
       movie?['formats'] ?? ['2D'],
@@ -67,7 +83,7 @@ class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) {
           return Dialog(
-            backgroundColor: const Color(0xffAFB8B9), // Grey theme from mockup
+            backgroundColor: const Color(0xffAFB8B9),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
             ),
@@ -89,6 +105,13 @@ class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
 
                   _buildFieldLabel('MOVIE TITLE'),
                   _buildStyledField(titleController),
+
+                  _buildFieldLabel('THEATRE'),
+                  _buildTheatreDropdown(
+                    selectedTheatre,
+                    _theatres,
+                    (val) => setDialogState(() => selectedTheatre = val),
+                  ),
 
                   _buildFieldLabel('GENRE'),
                   _buildStyledField(genreController),
@@ -161,7 +184,6 @@ class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
                     isUpdate: movie != null,
                     onCancel: () => Navigator.pop(context),
                     onAction: () async {
-                      debugPrint('🎬 FORM - Attempting to save movie...');
                       if (titleController.text.isNotEmpty) {
                         final movieData = {
                           'title': titleController.text,
@@ -175,6 +197,7 @@ class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
                           'description': descriptionController.text,
                           'formats': selectedFormats,
                           'languages': selectedLanguages,
+                          'theatre': selectedTheatre,
                         };
 
                         try {
@@ -201,7 +224,6 @@ class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
                           }
                           _loadMovies();
                         } catch (e) {
-                          debugPrint('❌ FORM ERROR - $e');
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
@@ -211,8 +233,6 @@ class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
                             );
                           }
                         }
-                      } else {
-                        debugPrint('⚠️ FORM - Title is empty');
                       }
                     },
                   ),
@@ -284,6 +304,37 @@ class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
                 (e) => DropdownMenuItem(
                   value: e,
                   child: Text(e, style: GoogleFonts.outfit()),
+                ),
+              )
+              .toList(),
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTheatreDropdown(
+    String? selected,
+    List<Map<String, dynamic>> theatres,
+    Function(String?) onChanged,
+  ) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: selected,
+          hint: Text('Select Theatre', style: GoogleFonts.outfit()),
+          isExpanded: true,
+          items: theatres
+              .map(
+                (t) => DropdownMenuItem<String>(
+                  value: t['name'] as String,
+                  child: Text(t['name'] as String, style: GoogleFonts.outfit()),
                 ),
               )
               .toList(),

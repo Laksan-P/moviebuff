@@ -56,7 +56,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       if (b['status'] == 'Confirmed') {
         confirmed++;
         revenue += price;
-      } else if (b['status'] == 'Cancelled') {
+      } else if (b['status'] == 'Cancelled' ||
+          b['status'] == 'Cancellation Requested') {
         cancelled++;
         // 50% is retained as revenue, 50% is refunded
         double cancellationFee = price * 0.5;
@@ -183,6 +184,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               value: '$_cancellations',
               subValue: 'Refunded: LKR ${_refundedAmount.asFixed(2)}',
               subValueColor: Colors.redAccent,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AdminCancellationsScreen(),
+                  ),
+                ).then((_) => _loadDashboardData());
+              },
             ),
 
             // --------------------------------------------------------
@@ -292,54 +301,70 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     String? subValue,
     Color? subValueColor,
     bool isRevenue = false,
+    VoidCallback? onTap,
   }) {
-    return Container(
-      width: double.infinity, // Ensures the card takes the full available width
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: const Color(0xFFAFB8B9), // Muted greyish-green per mockup
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: GoogleFonts.outfit(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF546E7A),
-              letterSpacing: 1,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: GoogleFonts.outfit(
-              fontSize: 32,
-              fontWeight: FontWeight.w900,
-              color: isRevenue ? const Color(0xFF00695C) : Colors.black87,
-            ),
-          ),
-          if (subValue != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              subValue,
-              style: GoogleFonts.outfit(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: subValueColor ?? const Color(0xFF00695C),
-              ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width:
+            double.infinity, // Ensures the card takes the full available width
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: const Color(0xFFAFB8B9), // Muted greyish-green per mockup
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
           ],
-        ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.outfit(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF546E7A),
+                    letterSpacing: 1,
+                  ),
+                ),
+                if (onTap != null)
+                  const Icon(
+                    Icons.arrow_forward_ios,
+                    size: 14,
+                    color: Color(0xFF546E7A),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: GoogleFonts.outfit(
+                fontSize: 32,
+                fontWeight: FontWeight.w900,
+                color: isRevenue ? const Color(0xFF00695C) : Colors.black87,
+              ),
+            ),
+            if (subValue != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                subValue,
+                style: GoogleFonts.outfit(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: subValueColor ?? const Color(0xFF00695C),
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

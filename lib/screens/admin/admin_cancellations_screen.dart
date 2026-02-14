@@ -29,10 +29,16 @@ class _AdminCancellationsScreenState extends State<AdminCancellationsScreen>
     if (mounted) {
       setState(() {
         _pendingRequests = allBookings
-            .where((b) => b['status'] == 'Cancellation Requested')
+            .where(
+              (b) =>
+                  b['status'].toString().trim().toLowerCase() ==
+                  'cancellation requested',
+            )
             .toList();
         _fullHistory = allBookings
-            .where((b) => b['status'] == 'Cancelled')
+            .where(
+              (b) => b['status'].toString().trim().toLowerCase() == 'cancelled',
+            )
             .toList();
         _isLoading = false;
       });

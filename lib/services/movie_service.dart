@@ -47,6 +47,7 @@ class MovieService {
         'languages': movie['languages'] ?? [],
         'image': movie['image'] ?? '',
         'trailerUrl': movie['trailerUrl'] ?? '',
+        'theatre': movie['theatre'],
       };
     }).toList();
   }

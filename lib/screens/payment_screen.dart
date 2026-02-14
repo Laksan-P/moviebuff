@@ -8,7 +8,8 @@ import 'my_bookings_screen.dart';
 class PaymentScreen extends StatefulWidget {
   final String movieTitle;
   final String theatreName;
-  final String dateAndTime;
+  final String showDate;
+  final String showTime;
   final int ticketCount;
   final String amount;
   final List<String> selectedSeats;
@@ -17,7 +18,8 @@ class PaymentScreen extends StatefulWidget {
     super.key,
     required this.movieTitle,
     required this.theatreName,
-    required this.dateAndTime,
+    required this.showDate,
+    required this.showTime,
     required this.ticketCount,
     required this.amount,
     required this.selectedSeats,
@@ -326,7 +328,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
           const SizedBox(height: 24),
           _infoSection('THEATRE', widget.theatreName),
           const SizedBox(height: 24),
-          _infoSection('DATE & TIME', widget.dateAndTime),
+          _infoSection(
+            'DATE & TIME',
+            '${widget.showDate} • ${widget.showTime}',
+          ),
           const SizedBox(height: 24),
           _infoSection('NUMBER OF TICKETS', '${widget.ticketCount} Ticket(s)'),
 
@@ -545,13 +550,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   void _processPayment() async {
-    final dateParts = widget.dateAndTime.split(' ');
-    final String timeStr = dateParts.length >= 5
-        ? '${dateParts[3]} ${dateParts[4]}'
-        : 'N/A';
-    final String dateStr = dateParts.length >= 3
-        ? '${dateParts[0]} ${dateParts[1]} ${dateParts[2]}'
-        : 'Feb 16, 2026';
+    final String timeStr = widget.showTime;
+    final String dateStr = widget.showDate;
 
     // Fetch current user details to ensure persistence in dashboard
     final userName = await AuthService.getUserName() ?? 'Guest';
@@ -656,7 +656,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         const SizedBox(height: 12),
                         _summaryRow('Theatre', widget.theatreName),
                         const SizedBox(height: 12),
-                        _summaryRow('Date & Time', widget.dateAndTime),
+                        _summaryRow(
+                          'Date & Time',
+                          '${widget.showDate} • ${widget.showTime}',
+                        ),
                         const SizedBox(height: 12),
                         _summaryRow('Seats', widget.selectedSeats.join(', ')),
                         const Padding(

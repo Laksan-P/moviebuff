@@ -59,7 +59,10 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
                     ? '#${id.substring(id.length - 6)}'
                     : '#$id';
                 final status = booking['status'] ?? 'Confirmed';
-                final isCancelled = status == 'Cancelled';
+                final statusLower = status.toString().toLowerCase();
+                final bool isCancelled =
+                    statusLower == 'cancelled' ||
+                    statusLower == 'cancellation requested';
 
                 return Container(
                   padding: const EdgeInsets.all(16),

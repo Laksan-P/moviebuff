@@ -339,6 +339,7 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
     DateTime selectedDate = DateTime.now();
     String? selectedFormat = '2D';
     String? selectedLanguage = 'English';
+    final priceController = TextEditingController(text: '750.0');
     final timeController = TextEditingController(text: '10:00 AM');
 
     showDialog(
@@ -694,6 +695,43 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                           setDialogState(() => selectedFormat = v),
                     ),
                   ),
+                  // Price Section
+                  Text(
+                    'Price (LKR)',
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[700],
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey[300]!),
+                    ),
+                    child: TextField(
+                      controller: priceController,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: InputDecoration(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
+                        border: InputBorder.none,
+                        hintText: 'Enter Price',
+                        hintStyle: GoogleFonts.outfit(color: Colors.grey[400]),
+                      ),
+                      style: GoogleFonts.outfit(
+                        fontSize: 16,
+                        color: const Color(0xFF020617),
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 32),
 
                   // Action Buttons
@@ -738,7 +776,9 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                                   'format': selectedFormat,
                                   'language': selectedLanguage,
                                   'label': selectedFormat,
-                                  'price': 0.0,
+                                  'price':
+                                      double.tryParse(priceController.text) ??
+                                      0.0,
                                 };
 
                                 debugPrint(

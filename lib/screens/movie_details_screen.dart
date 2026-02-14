@@ -71,7 +71,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
     final List<String> dates = ['All Dates', 'Today', 'Tomorrow'];
     final now = DateTime.now();
     final months = [
-      'Jun',
+      'Jan',
       'Feb',
       'Mar',
       'Apr',
@@ -85,8 +85,8 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
       'Dec',
     ];
 
-    // Generate next 7 days starting from day after tomorrow
-    for (int i = 2; i < 9; i++) {
+    // Generate next 5 days (total 7 days including Today and Tomorrow)
+    for (int i = 2; i < 7; i++) {
       final date = now.add(Duration(days: i));
       final dayStr = date.day.toString().padLeft(2, '0');
       final monthStr = months[date.month - 1].toUpperCase();
@@ -598,6 +598,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                                         movieTitle:
                                             widget.movie['title'] ?? 'Movie',
                                         showtime: t['time'],
+                                        showDate: t['date'],
                                         theatreName:
                                             t['theatre'] ?? 'Unknown Theatre',
                                         selectedFormat: t['format'] ?? '2D',
