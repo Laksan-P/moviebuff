@@ -388,6 +388,7 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                       border: Border.all(color: Colors.grey[300]!),
                     ),
                     child: DropdownButtonFormField<String>(
+                      isExpanded: true,
                       // ignore: deprecated_member_use
                       value: selectedMovie,
                       decoration: InputDecoration(
@@ -411,7 +412,10 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                       items: _movies.map((m) {
                         return DropdownMenuItem(
                           value: m['title'] as String,
-                          child: Text(m['title'] as String),
+                          child: Text(
+                            m['title'] as String,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         );
                       }).toList(),
                       onChanged: (v) => setDialogState(() => selectedMovie = v),
@@ -437,6 +441,7 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                       border: Border.all(color: Colors.grey[300]!),
                     ),
                     child: DropdownButtonFormField<String>(
+                      isExpanded: true,
                       // ignore: deprecated_member_use
                       value: selectedTheatre,
                       decoration: InputDecoration(
@@ -460,7 +465,10 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                       items: _theatres.map((t) {
                         return DropdownMenuItem(
                           value: t['name'] as String,
-                          child: Text(t['name'] as String),
+                          child: Text(
+                            t['name'] as String,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         );
                       }).toList(),
                       onChanged: (v) =>
@@ -621,6 +629,7 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                       border: Border.all(color: Colors.grey[300]!),
                     ),
                     child: DropdownButtonFormField<String>(
+                      isExpanded: true,
                       // ignore: deprecated_member_use
                       value: selectedLanguage,
                       decoration: InputDecoration(
@@ -642,7 +651,10 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                         color: Colors.grey[600],
                       ),
                       items: ['English', 'Tamil', 'Sinhala', 'Hindi'].map((l) {
-                        return DropdownMenuItem(value: l, child: Text(l));
+                        return DropdownMenuItem(
+                          value: l,
+                          child: Text(l, overflow: TextOverflow.ellipsis),
+                        );
                       }).toList(),
                       onChanged: (v) =>
                           setDialogState(() => selectedLanguage = v),
@@ -668,6 +680,7 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                       border: Border.all(color: Colors.grey[300]!),
                     ),
                     child: DropdownButtonFormField<String>(
+                      isExpanded: true,
                       // ignore: deprecated_member_use
                       value: selectedFormat,
                       decoration: InputDecoration(
@@ -689,7 +702,10 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                         color: Colors.grey[600],
                       ),
                       items: ['2D', '3D', 'IMAX', '4DX'].map((f) {
-                        return DropdownMenuItem(value: f, child: Text(f));
+                        return DropdownMenuItem(
+                          value: f,
+                          child: Text(f, overflow: TextOverflow.ellipsis),
+                        );
                       }).toList(),
                       onChanged: (v) =>
                           setDialogState(() => selectedFormat = v),

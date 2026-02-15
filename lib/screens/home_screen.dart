@@ -221,11 +221,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       SizedBox(height: isWide ? 32 : 20),
 
-                      if (isWide)
+                      if (constraints.maxWidth > 600)
                         GridView.count(
                           shrinkWrap: true,
                           crossAxisCount: 3,
-                          childAspectRatio: 2.5,
+                          childAspectRatio: constraints.maxWidth > 900
+                              ? 2.5
+                              : 2.0,
                           crossAxisSpacing: 20,
                           mainAxisSpacing: 20,
                           physics: const NeverScrollableScrollPhysics(),
@@ -362,107 +364,137 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               },
               child: Container(
+                clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(24),
-                  image: DecorationImage(
-                    image:
-                        movie['image'] != null &&
-                            movie['image']!.startsWith('http')
-                        ? NetworkImage(movie['image']!)
-                        : AssetImage(movie['image'] ?? '') as ImageProvider,
-                    fit: BoxFit.cover,
-                    onError: (exception, stackTrace) {
-                      debugPrint('❌ SLIDER IMAGE ERROR: $exception');
-                    },
-                  ),
                 ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(24),
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Colors.black.withValues(alpha: 0.8),
-                      ],
-                    ),
-                  ),
-                  padding: const EdgeInsets.all(24),
-                  child: Stack(
-                    children: [
-                      Align(
-                        alignment: Alignment.bottomLeft,
-                        child: Padding(
-                          padding: const EdgeInsets.only(bottom: 30),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 6,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // Network or Asset Image
+                    movie['image'] != null && movie['image']!.startsWith('http')
+                        ? Image.network(
+                            movie['image']!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: AppColors.cardGray,
+                                child: const Icon(
+                                  Icons.broken_image,
+                                  color: Colors.white24,
+                                  size: 48,
                                 ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.error,
-                                  borderRadius: BorderRadius.circular(20),
+                              );
+                            },
+                          )
+                        : Image.asset(
+                            movie['image'] ?? '',
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: AppColors.cardGray,
+                                child: const Icon(
+                                  Icons.movie,
+                                  color: Colors.white24,
+                                  size: 48,
                                 ),
-                                child: Text(
-                                  'NOW SHOWING',
-                                  style: GoogleFonts.outfit(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                (movie['title'] ?? '').toUpperCase(),
-                                style: GoogleFonts.outfit(
-                                  color: Colors.white,
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.w900,
-                                  height: 1.1,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                movie['genre'] ?? '',
-                                style: GoogleFonts.outfit(
-                                  color: Colors.white.withValues(alpha: 0.9),
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
+                              );
+                            },
                           ),
-                        ),
-                      ),
-                      Align(
-                        alignment: Alignment.bottomCenter,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            for (int i = 0; i < _sliderMovies.length; i++)
-                              Container(
-                                width: 40,
-                                height: 4,
-                                margin: const EdgeInsets.only(right: 8),
-                                decoration: BoxDecoration(
-                                  color: _currentSliderIndex == i
-                                      ? Colors.white
-                                      : Colors.white.withValues(alpha: 0.3),
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                              ),
+                    // Gradient Overlay
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withValues(alpha: 0.8),
                           ],
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                    // Movie Info
+                    Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Stack(
+                        children: [
+                          Align(
+                            alignment: Alignment.bottomLeft,
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 30),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.error,
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      'NOW SHOWING',
+                                      style: GoogleFonts.outfit(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    (movie['title'] ?? '').toUpperCase(),
+                                    style: GoogleFonts.outfit(
+                                      color: Colors.white,
+                                      fontSize: 32,
+                                      fontWeight: FontWeight.w900,
+                                      height: 1.1,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    movie['genre'] ?? '',
+                                    style: GoogleFonts.outfit(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.9,
+                                      ),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Align(
+                            alignment: Alignment.bottomCenter,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                for (int i = 0; i < _sliderMovies.length; i++)
+                                  Container(
+                                    width: 40,
+                                    height: 4,
+                                    margin: const EdgeInsets.only(right: 8),
+                                    decoration: BoxDecoration(
+                                      color: _currentSliderIndex == i
+                                          ? Colors.white
+                                          : Colors.white.withValues(alpha: 0.3),
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             );

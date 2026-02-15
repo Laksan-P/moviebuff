@@ -97,14 +97,18 @@ class AuthService {
     final usersJson = await _getString(_usersKey) ?? '[]';
     final List<dynamic> users = jsonDecode(usersJson);
 
-    final normalizedEmail = email.trim().toLowerCase();
+    final normalizedEmail = email
+        .trim(); // Only trim, don't lowercase for storage
+    final uniquenessEmail = email
+        .trim()
+        .toLowerCase(); // Used only for uniqueness check
 
     debugPrint('🔵 REGISTER - Input email: "$email"');
-    debugPrint('🔵 REGISTER - Normalized email: "$normalizedEmail"');
+    debugPrint('🔵 REGISTER - Storage email: "$normalizedEmail"');
 
-    // Check if user already exists
+    // Check if user already exists (case-insensitive check for uniqueness)
     if (users.any(
-      (u) => (u['email'] as String).trim().toLowerCase() == normalizedEmail,
+      (u) => (u['email'] as String).trim().toLowerCase() == uniquenessEmail,
     )) {
       debugPrint('🔴 REGISTER - User already exists!');
       return false;
@@ -144,13 +148,13 @@ class AuthService {
     debugPrint('🟢 LOGIN - Total users in storage: ${users.length}');
     debugPrint('🟢 LOGIN - Input email: "$email"');
 
-    final normalizedEmail = email.trim().toLowerCase();
+    final normalizedEmail = email.trim(); // No lowercase for exact match
     final normalizedPassword = password.trim();
 
-    debugPrint('🟢 LOGIN - Normalized email: "$normalizedEmail"');
+    debugPrint('🟢 LOGIN - Search email: "$normalizedEmail"');
 
-    // Hardcoded Admin Credentials Fallback
-    if (normalizedEmail == 'admin@moviebuff.com' &&
+    // Hardcoded Admin Credentials Fallback (Keep case-insensitive for this specific one if desired, or make it exact)
+    if (normalizedEmail.toLowerCase() == 'admin@moviebuff.com' &&
         normalizedPassword == 'admin123') {
       debugPrint('✅ LOGIN - Hardcoded Admin authenticated');
       return {
@@ -163,7 +167,7 @@ class AuthService {
     try {
       final user = users.firstWhere(
         (u) =>
-            (u['email'] as String).trim().toLowerCase() == normalizedEmail &&
+            (u['email'] as String).trim() == normalizedEmail &&
             (u['password'] as String).trim() == normalizedPassword,
       );
       debugPrint('✅ LOGIN - Authentication successful for: ${user['email']}');

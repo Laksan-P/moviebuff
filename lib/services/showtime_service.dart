@@ -189,8 +189,11 @@ class ShowtimeService {
       showtimes = decoded.map((s) => Map<String, dynamic>.from(s)).toList();
     }
 
-    // Identify and remove all template-based showtimes to refresh them
-    final templatePrefixes = ['ags_', 'pvr_', 'sathyam_', 'mayajaal_'];
+    // Dynamically identify all template-based showtime prefixes to refresh them
+    final Set<String> templatePrefixes = _showtimeTemplates
+        .map((t) => (t['id_base'] as String).split('_')[0] + '_')
+        .toSet();
+
     showtimes.removeWhere((s) {
       final id = s['id']?.toString() ?? '';
       return templatePrefixes.any((prefix) => id.startsWith(prefix));
@@ -254,26 +257,12 @@ class ShowtimeService {
 
   // Time-based filtering helper
   static bool isShowtimePassed(String timeStr, String dateStr) {
-    // UNLIMITED DATE: Disabled filtering to ensure all movies/showtimes are visible
-    // as requested by the user.
-    return false;
-    /*
     try {
       final now = DateTime.now();
       DateTime showDate;
 
-      // Parse dateStr (handles both "yyyy-MM-dd" and legacy "Today")
-      if (dateStr == 'Today') {
-        showDate = DateTime(now.year, now.month, now.day);
-      } else if (dateStr == 'Tomorrow') {
-        showDate = DateTime(
-          now.year,
-          now.month,
-          now.day,
-        ).add(const Duration(days: 1));
-      } else {
-        showDate = DateTime.parse(dateStr);
-      }
+      // Parse dateStr (handles "yyyy-MM-dd")
+      showDate = DateTime.parse(dateStr);
 
       // If the show date is in the past, return true
       final normalizedNow = DateTime(now.year, now.month, now.day);
@@ -281,7 +270,7 @@ class ShowtimeService {
       if (showDate.isAfter(normalizedNow)) return false;
 
       // If show is today, check time
-      final parts = timeStr.split(' ');
+      final parts = timeStr.trim().split(' ');
       if (parts.length != 2) return false;
 
       final timeParts = parts[0].split(':');
@@ -294,11 +283,11 @@ class ShowtimeService {
 
       final showTime = DateTime(now.year, now.month, now.day, hour, minute);
 
+      // Hide if the current time is after the showtime
       return now.isAfter(showTime);
     } catch (e) {
-      debugPrint('⏰ TIME ERROR: $e');
+      debugPrint('⏰ TIME ERROR ($timeStr, $dateStr): $e');
       return false;
     }
-    */
   }
 }

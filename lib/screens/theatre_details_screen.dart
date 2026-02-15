@@ -50,12 +50,25 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
     // Filter movies that have showtimes at THIS theatre
     // AND at least one showtime is in the future
     final filteredMovies = movies.where((movie) {
-      final movieShowtimes = allShowtimes.where(
-        (st) =>
-            st['movie'] == movie['title'] &&
-            st['theatre'] == widget.theatre['name'],
-      );
+      final movieTitle = (movie['title'] as String).trim().toLowerCase();
+      final targetTheatre = (widget.theatre['name'] as String)
+          .trim()
+          .toLowerCase();
 
+      // Check if movie is explicitly assigned to this theatre
+      final assignedTheatre = (movie['theatre'] as String? ?? '')
+          .trim()
+          .toLowerCase();
+      bool isAssignedToThisTheatre = assignedTheatre == targetTheatre;
+
+      final movieShowtimes = allShowtimes.where((st) {
+        final stMovie = (st['movie'] as String? ?? '').trim().toLowerCase();
+        final stTheatre = (st['theatre'] as String? ?? '').trim().toLowerCase();
+        return stMovie == movieTitle && stTheatre == targetTheatre;
+      });
+
+      // Show if it belongs to this theatre OR has showtimes here
+      if (isAssignedToThisTheatre) return true;
       if (movieShowtimes.isEmpty) return false;
 
       // Check if at least one showtime is in the future

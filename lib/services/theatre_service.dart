@@ -19,10 +19,27 @@ class TheatreService {
   // Initialize theatres if not present
   static Future<void> initTheatres() async {
     final existing = await _getString(_theatresKey);
-    if (existing == null) {
-      // Seed with initial theatres from AppData
-      await _setString(_theatresKey, jsonEncode(AppData.theatres));
-      debugPrint('🎭 THEATRE SERVICE - Initialized with default theatres');
+    List<Map<String, dynamic>> theatres = [];
+
+    if (existing != null) {
+      final List<dynamic> decoded = jsonDecode(existing);
+      theatres = decoded.map((t) => Map<String, dynamic>.from(t)).toList();
+    }
+
+    // Add any missing theatres from AppData
+    bool updated = false;
+    for (var initialTheatre in AppData.theatres) {
+      if (!theatres.any((t) => t['name'] == initialTheatre['name'])) {
+        theatres.add(initialTheatre);
+        updated = true;
+      }
+    }
+
+    if (updated || existing == null) {
+      await _setString(_theatresKey, jsonEncode(theatres));
+      debugPrint(
+        '🎭 THEATRE SERVICE - Synced with ${updated ? "new " : ""}default theatres',
+      );
     }
   }
 

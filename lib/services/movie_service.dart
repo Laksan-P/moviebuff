@@ -23,9 +23,27 @@ class MovieService {
   // Initialize movies if not present
   static Future<void> initMovies() async {
     final existing = await _getString(_moviesKey);
-    if (existing == null) {
-      await _setString(_moviesKey, jsonEncode(_initialMovies));
-      debugPrint('🎬 MOVIE SERVICE - Initialized with default movies');
+    List<Map<String, dynamic>> movies = [];
+
+    if (existing != null) {
+      final List<dynamic> decoded = jsonDecode(existing);
+      movies = decoded.map((m) => Map<String, dynamic>.from(m)).toList();
+    }
+
+    // Add any missing movies from AppData (initial movies)
+    bool updated = false;
+    for (var initialMovie in _initialMovies) {
+      if (!movies.any((m) => m['title'] == initialMovie['title'])) {
+        movies.add(initialMovie);
+        updated = true;
+      }
+    }
+
+    if (updated || existing == null) {
+      await _setString(_moviesKey, jsonEncode(movies));
+      debugPrint(
+        '🎬 MOVIE SERVICE - Synced with ${updated ? "new " : ""}default movies',
+      );
     }
   }
 

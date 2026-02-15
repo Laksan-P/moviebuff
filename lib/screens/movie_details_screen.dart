@@ -101,11 +101,17 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
   List<Map<String, dynamic>> _getFilteredShowtimes() {
     return allShowtimes.where((st) {
       // 1. Movie Filter
-      if (st['movie'] != widget.movie['title']) return false;
+      final stMovie = (st['movie'] as String? ?? '').trim().toLowerCase();
+      final targetMovie = (widget.movie['title'] as String)
+          .trim()
+          .toLowerCase();
+      if (stMovie != targetMovie) return false;
 
       // 2. Theatre Filter
-      if (widget.theatreName != null && st['theatre'] != widget.theatreName) {
-        return false;
+      if (widget.theatreName != null) {
+        final stTheatre = (st['theatre'] as String? ?? '').trim().toLowerCase();
+        final targetTheatre = widget.theatreName!.trim().toLowerCase();
+        if (stTheatre != targetTheatre) return false;
       }
 
       // 3. Date Filter
@@ -350,67 +356,93 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Text(
-                          widget.movie['title'] ?? 'Unknown',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.outfit(
-                            fontSize: 36,
-                            fontWeight: FontWeight.w900,
-                            color: AppColors.black,
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 600),
+                          child: Text(
+                            widget.movie['title'] ?? 'Unknown',
+                            textAlign: TextAlign.center,
+                            softWrap: true,
+                            style: GoogleFonts.outfit(
+                              fontSize: 32,
+                              fontWeight: FontWeight.w900,
+                              color: AppColors.black,
+                              height: 1.1,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 12),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 4,
+                          runSpacing: 4,
                           children: [
                             const Icon(
                               Icons.star,
                               color: Colors.amber,
-                              size: 20,
+                              size: 18,
                             ),
-                            const SizedBox(width: 4),
+                            const SizedBox(width: 2),
                             Text(
                               widget.movie['rating'] ?? 'N/A',
                               style: GoogleFonts.outfit(
                                 color: Colors.amber[700],
                                 fontWeight: FontWeight.bold,
+                                fontSize: 13,
                               ),
                             ),
                             _dot(),
                             Text(
                               '${widget.movie['duration'] ?? 0} mins',
-                              style: GoogleFonts.outfit(color: Colors.black54),
+                              style: GoogleFonts.outfit(
+                                color: Colors.black54,
+                                fontSize: 13,
+                              ),
                             ),
                             _dot(),
                             Text(
-                              widget.movie['genre']?.split(' ')[0] ?? 'Action',
-                              style: GoogleFonts.outfit(color: Colors.red[400]),
+                              (widget.movie['genre'] ?? 'Action')
+                                  .toString()
+                                  .split(RegExp(r'[ /]'))[0],
+                              style: GoogleFonts.outfit(
+                                color: Colors.red[400],
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                             _dot(),
                             Text(
                               widget.movie['releaseDate'] ?? 'Coming Soon',
-                              style: GoogleFonts.outfit(color: Colors.black54),
+                              style: GoogleFonts.outfit(
+                                color: Colors.black54,
+                                fontSize: 13,
+                              ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 20),
-
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          alignment: WrapAlignment.center,
-                          children: [
-                            ...(widget.movie['formats'] as List<dynamic>? ?? [])
-                                .map(
-                                  (f) => _selectionChip(f.toString(), false),
-                                ),
-                            ...(widget.movie['languages'] as List<dynamic>? ??
-                                    [])
-                                .map((l) => _selectionChip(l.toString(), true)),
-                          ],
+                        Center(
+                          child: Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            alignment: WrapAlignment.center,
+                            children: [
+                              ...(widget.movie['formats'] as List<dynamic>? ??
+                                      [])
+                                  .map(
+                                    (f) => _selectionChip(f.toString(), false),
+                                  ),
+                              ...(widget.movie['languages'] as List<dynamic>? ??
+                                      [])
+                                  .map(
+                                    (l) => _selectionChip(l.toString(), true),
+                                  ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 12),
                       ],
                     ),
                   ),
@@ -610,17 +642,26 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                                 },
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 10,
+                                    horizontal: 20,
+                                    vertical: 12,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFF9FAFB),
-                                    borderRadius: BorderRadius.circular(12),
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(16),
                                     border: Border.all(
                                       color: const Color(
                                         0xFF10B981,
-                                      ).withValues(alpha: 0.1),
+                                      ).withValues(alpha: 0.2),
                                     ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(
+                                          0xFF10B981,
+                                        ).withValues(alpha: 0.05),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
                                   ),
                                   child: Column(
                                     children: [
@@ -628,8 +669,8 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                                         Text(
                                           t['theatre'] ?? '',
                                           style: GoogleFonts.outfit(
-                                            color: Colors.black54,
-                                            fontSize: 10,
+                                            color: Colors.black45,
+                                            fontSize: 11,
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
@@ -638,14 +679,17 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                                         style: GoogleFonts.outfit(
                                           color: const Color(0xFF10B981),
                                           fontWeight: FontWeight.w900,
-                                          fontSize: 15,
+                                          fontSize: 18,
                                         ),
                                       ),
                                       Text(
                                         t['label'],
-                                        style: const TextStyle(
-                                          color: Color(0xFF10B981),
-                                          fontSize: 10,
+                                        style: GoogleFonts.outfit(
+                                          color: const Color(
+                                            0xFF10B981,
+                                          ).withValues(alpha: 0.8),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
                                         ),
                                       ),
                                     ],

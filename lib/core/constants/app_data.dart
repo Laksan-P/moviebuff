@@ -27,8 +27,7 @@ class AppData {
     },
     {
       'title': 'Interstellar',
-      'image':
-          'https://image.tmdb.org/t/p/original/gEU2QniL6E8AHtMY4kRFSvQ660b.jpg',
+      'image': 'https://image.tmdb.org/t/p/w500/nCbk19SIsKbRRLpD46h3P3qSRR.jpg',
       'genre': 'Sci-Fi, Drama',
       'trailerUrl': 'https://www.youtube.com/watch?v=zSWdZVtXT7E',
       'rating': 'PG-13',
@@ -56,7 +55,7 @@ class AppData {
     {
       'title': 'The Dark Knight',
       'image':
-          'https://image.tmdb.org/t/p/original/qJ2tW6WMUDp92SKyYw9Status.jpg',
+          'https://image.tmdb.org/t/p/original/oXUoV0v9Ar7uYV6uS0A9T0p969p.jpg',
       'genre': 'Action, Crime',
       'trailerUrl': 'https://www.youtube.com/watch?v=EXeTwQWaywY',
       'rating': 'PG-13',

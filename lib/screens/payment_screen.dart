@@ -44,7 +44,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final isWide = constraints.maxWidth > 900;
+          final isWide = constraints.maxWidth > 600;
 
           return Center(
             child: ConstrainedBox(
@@ -83,14 +83,17 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           Expanded(flex: 3, child: _buildPaymentDetailsCard()),
                           const SizedBox(width: 32),
                           // Right: Order Summary
-                          Expanded(flex: 2, child: _buildOrderSummaryCard()),
+                          Expanded(
+                            flex: 2,
+                            child: _buildOrderSummaryCard(isWide: true),
+                          ),
                         ],
                       )
                     else ...[
                       // Mobile Stack
                       _buildPaymentDetailsCard(),
                       const SizedBox(height: 24),
-                      _buildOrderSummaryCard(),
+                      _buildOrderSummaryCard(isWide: false),
                     ],
 
                     const SizedBox(height: 48),
@@ -304,7 +307,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  Widget _buildOrderSummaryCard() {
+  Widget _buildOrderSummaryCard({required bool isWide}) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -361,12 +364,15 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     color: Colors.white.withValues(alpha: 0.6),
                   ),
                 ),
-                Text(
-                  'LKR ${widget.amount}',
-                  style: GoogleFonts.outfit(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                Flexible(
+                  child: Text(
+                    'LKR ${widget.amount}',
+                    textAlign: TextAlign.end,
+                    style: GoogleFonts.outfit(
+                      fontSize: isWide ? 16 : 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ],
