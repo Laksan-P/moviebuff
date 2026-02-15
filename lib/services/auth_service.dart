@@ -153,8 +153,8 @@ class AuthService {
 
     debugPrint('🟢 LOGIN - Search email: "$normalizedEmail"');
 
-    // Hardcoded Admin Credentials Fallback (Keep case-insensitive for this specific one if desired, or make it exact)
-    if (normalizedEmail.toLowerCase() == 'admin@moviebuff.com' &&
+    // Hardcoded Admin Credentials Fallback
+    if (normalizedEmail == 'admin@moviebuff.com' &&
         normalizedPassword == 'admin123') {
       debugPrint('✅ LOGIN - Hardcoded Admin authenticated');
       return {

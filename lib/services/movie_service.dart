@@ -30,19 +30,41 @@ class MovieService {
       movies = decoded.map((m) => Map<String, dynamic>.from(m)).toList();
     }
 
-    // Add any missing movies from AppData (initial movies)
+    // Add missing movies OR update existing ones from AppData
     bool updated = false;
     for (var initialMovie in _initialMovies) {
-      if (!movies.any((m) => m['title'] == initialMovie['title'])) {
+      final index = movies.indexWhere(
+        (m) => m['title'] == initialMovie['title'],
+      );
+
+      if (index == -1) {
+        // New movie added in AppData
         movies.add(initialMovie);
         updated = true;
+      } else {
+        // Existing movie - check if important fields changed in code
+        bool changed = false;
+        if (movies[index]['image'] != initialMovie['image']) {
+          movies[index]['image'] = initialMovie['image'];
+          changed = true;
+        }
+        if (movies[index]['genre'] != initialMovie['genre']) {
+          movies[index]['genre'] = initialMovie['genre'];
+          changed = true;
+        }
+        if (movies[index]['description'] != initialMovie['description']) {
+          movies[index]['description'] = initialMovie['description'];
+          changed = true;
+        }
+
+        if (changed) updated = true;
       }
     }
 
     if (updated || existing == null) {
       await _setString(_moviesKey, jsonEncode(movies));
       debugPrint(
-        '🎬 MOVIE SERVICE - Synced with ${updated ? "new " : ""}default movies',
+        '🎬 MOVIE SERVICE - Synced with ${existing == null ? "initial" : "updated"} default movies',
       );
     }
   }

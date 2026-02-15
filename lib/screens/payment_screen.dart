@@ -30,8 +30,22 @@ class PaymentScreen extends StatefulWidget {
 }
 
 class _PaymentScreenState extends State<PaymentScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _cardNumberController = TextEditingController();
+  final _cardNameController = TextEditingController();
+  final _expiryController = TextEditingController();
+  final _cvvController = TextEditingController();
   String _paymentMethod = 'Debit Card';
   bool _agreedToPolicy = false;
+
+  @override
+  void dispose() {
+    _cardNumberController.dispose();
+    _cardNameController.dispose();
+    _expiryController.dispose();
+    _cvvController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -114,195 +128,265 @@ class _PaymentScreenState extends State<PaymentScreen> {
         color: const Color(0xFF6D87AE),
         borderRadius: BorderRadius.circular(24),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Payment Details',
-            style: GoogleFonts.outfit(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 32),
-
-          Text(
-            'Payment Method',
-            style: GoogleFonts.outfit(
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 16),
-          _buildRadioOption('Debit Card'),
-          _buildRadioOption('Credit Card'),
-
-          const SizedBox(height: 24),
-          _buildInputField(
-            'Card Number',
-            '1234 5678 9012 3456',
-            hint: 'Demo: 4532 1234 5678 9010',
-            keyboardType: TextInputType.number,
-            maxLength: 19,
-            formatters: [
-              FilteringTextInputFormatter.digitsOnly,
-              CardNumberFormatter(),
-            ],
-          ),
-          const SizedBox(height: 24),
-          _buildInputField(
-            'Cardholder Name',
-            'Name on card',
-            keyboardType: TextInputType.name,
-            formatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: _buildInputField(
-                  'Expiry Date',
-                  'MM/YY',
-                  hint: 'Demo: 12/25',
-                  keyboardType: TextInputType.datetime,
-                  maxLength: 5,
-                  formatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[0-9/]')),
-                    ExpiryDateFormatter(),
-                  ],
-                ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Payment Details',
+              style: GoogleFonts.outfit(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildInputField(
-                  'CVV',
-                  '123',
-                  hint: 'Demo: 123',
-                  keyboardType: TextInputType.number,
-                  maxLength: 3,
-                  formatters: [FilteringTextInputFormatter.digitsOnly],
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 32),
-          // Secure Encryption Note
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white10),
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(height: 32),
+
+            Text(
+              'Payment Method',
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildRadioOption('Debit Card'),
+            _buildRadioOption('Credit Card'),
+
+            const SizedBox(height: 24),
+            _buildInputField(
+              'Card Number',
+              '1234 5678 9012 3456',
+              controller: _cardNumberController,
+              hint: 'Demo: 4532 1234 5678 9010',
+              keyboardType: TextInputType.number,
+              maxLength: 19,
+              formatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                CardNumberFormatter(),
+              ],
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter card number';
+                }
+                if (value.replaceAll(' ', '').length < 16) {
+                  return 'Invalid card number';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 24),
+            _buildInputField(
+              'Cardholder Name',
+              'Name on card',
+              controller: _cardNameController,
+              keyboardType: TextInputType.name,
+              formatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
+              ],
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter cardholder name';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 24),
+            Row(
               children: [
-                const Icon(Icons.lock, color: Colors.amber, size: 20),
-                const SizedBox(width: 12),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'SECURE ENCRYPTION',
-                        style: GoogleFonts.outfit(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Your payment information is encrypted and secure. We never store your full card details.',
-                        style: GoogleFonts.outfit(
-                          fontSize: 11,
-                          color: Colors.black,
-                          height: 1.4,
-                        ),
-                      ),
+                  child: _buildInputField(
+                    'Expiry Date',
+                    'MM/YY',
+                    controller: _expiryController,
+                    hint: 'Demo: 12/25',
+                    keyboardType: TextInputType.datetime,
+                    maxLength: 5,
+                    formatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[0-9/]')),
+                      ExpiryDateFormatter(),
                     ],
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Required';
+                      }
+                      if (!RegExp(r'^\d{2}/\d{2}$').hasMatch(value)) {
+                        return 'MM/YY';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildInputField(
+                    'CVV',
+                    '123',
+                    controller: _cvvController,
+                    hint: 'Demo: 123',
+                    keyboardType: TextInputType.number,
+                    maxLength: 3,
+                    formatters: [FilteringTextInputFormatter.digitsOnly],
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Required';
+                      }
+                      if (value.length < 3) {
+                        return 'Invalid';
+                      }
+                      return null;
+                    },
                   ),
                 ),
               ],
             ),
-          ),
 
-          const SizedBox(height: 32),
-          Row(
-            children: [
-              Checkbox(
-                value: _agreedToPolicy,
-                onChanged: (v) => setState(() => _agreedToPolicy = v!),
-                activeColor: const Color(0xFF006D7E),
+            const SizedBox(height: 32),
+            // Secure Encryption Note
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white10),
               ),
-              Expanded(
-                child: Text.rich(
-                  TextSpan(
-                    text: 'I agree to the ',
-                    style: GoogleFonts.outfit(
-                      fontSize: 13,
-                      color: Colors.black,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.lock, color: Colors.amber, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'SECURE ENCRYPTION',
+                          style: GoogleFonts.outfit(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Your payment information is encrypted and secure. We never store your full card details.',
+                          style: GoogleFonts.outfit(
+                            fontSize: 11,
+                            color: Colors.black,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
                     ),
-                    children: [
-                      TextSpan(
-                        text: 'cancellation policy',
-                        style: const TextStyle(
-                          decoration: TextDecoration.underline,
-                          fontWeight: FontWeight.bold,
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 32),
+            FormField<bool>(
+              initialValue: _agreedToPolicy,
+              validator: (value) {
+                if (value != true) {
+                  return 'You must agree to the policy to continue';
+                }
+                return null;
+              },
+              builder: (state) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: _agreedToPolicy,
+                          onChanged: (v) {
+                            setState(() => _agreedToPolicy = v!);
+                            state.didChange(v);
+                          },
+                          activeColor: const Color(0xFF006D7E),
+                        ),
+                        Expanded(
+                          child: Text.rich(
+                            TextSpan(
+                              text: 'I agree to the ',
+                              style: GoogleFonts.outfit(
+                                fontSize: 13,
+                                color: Colors.black,
+                              ),
+                              children: [
+                                TextSpan(
+                                  text: 'cancellation policy',
+                                  style: const TextStyle(
+                                    decoration: TextDecoration.underline,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const TextSpan(
+                                  text:
+                                      ' which allows 50% refund deduction as cancellation fee',
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (state.hasError)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 12, top: 4),
+                        child: Text(
+                          state.errorText!,
+                          style: GoogleFonts.outfit(
+                            color: Colors.red[700],
+                            fontSize: 12,
+                          ),
                         ),
                       ),
-                      const TextSpan(
-                        text:
-                            ' which allows 50% refund deduction as cancellation fee',
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
+                  ],
+                );
+              },
+            ),
 
-          const SizedBox(height: 32),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    side: const BorderSide(color: Colors.white30),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+            const SizedBox(height: 32),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: Colors.white30),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
+                    child: const Text('Cancel'),
                   ),
-                  child: const Text('Cancel'),
                 ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _agreedToPolicy ? _processPayment : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF023E5C),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _processPayment,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF023E5C),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
                     ),
-                    elevation: 0,
+                    child: const Text('Pay'),
                   ),
-                  child: const Text('Pay'),
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -457,6 +541,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
     TextInputType? keyboardType,
     int? maxLength,
     List<TextInputFormatter>? formatters,
+    TextEditingController? controller,
+    String? Function(String?)? validator,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -470,16 +556,23 @@ class _PaymentScreenState extends State<PaymentScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        TextField(
+        TextFormField(
+          controller: controller,
           keyboardType: keyboardType,
           inputFormatters: formatters,
           maxLength: maxLength,
+          validator: validator,
           style: GoogleFonts.outfit(color: Colors.black),
           decoration: InputDecoration(
             hintText: placeholder,
             hintStyle: GoogleFonts.outfit(color: Colors.black45),
             filled: true,
             fillColor: const Color(0xFFD1D5DB).withValues(alpha: 0.8),
+            errorStyle: GoogleFonts.outfit(
+              color: Colors.red[900],
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 16,
@@ -488,6 +581,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.red, width: 2),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.red, width: 2),
             ),
           ),
         ),
@@ -556,6 +657,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   void _processPayment() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
     final String timeStr = widget.showTime;
     final String dateStr = widget.showDate;
 
@@ -580,6 +685,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
     if (!mounted) return;
 
+  // Booking Confirmation Dialog
     showGeneralDialog(
       context: context,
       barrierDismissible: false,

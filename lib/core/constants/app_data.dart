@@ -27,7 +27,7 @@ class AppData {
     },
     {
       'title': 'Interstellar',
-      'image': 'https://image.tmdb.org/t/p/w500/nCbk19SIsKbRRLpD46h3P3qSRR.jpg',
+      'image': 'https://mir-s3-cdn-cf.behance.net/project_modules/hd/8d8f28105415493.619ded067937d.jpg',
       'genre': 'Sci-Fi, Drama',
       'trailerUrl': 'https://www.youtube.com/watch?v=zSWdZVtXT7E',
       'rating': 'PG-13',
@@ -41,7 +41,7 @@ class AppData {
     {
       'title': 'Inception',
       'image':
-          'https://image.tmdb.org/t/p/original/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg',
+          'https://image.tmdb.org/t/p/original/eKkbXuGZ68YOkTs2sz8OYu7Y3hj.jpg',
       'genre': 'Action, Sci-Fi',
       'trailerUrl': 'https://www.youtube.com/watch?v=YoHD9XEInc0',
       'rating': 'PG-13',
@@ -55,7 +55,7 @@ class AppData {
     {
       'title': 'The Dark Knight',
       'image':
-          'https://image.tmdb.org/t/p/original/oXUoV0v9Ar7uYV6uS0A9T0p969p.jpg',
+          'https://m.media-amazon.com/images/M/MV5BMTMxNTMwODM0NF5BMl5BanBnXkFtZTcwODAyMTk2Mw@@._V1_FMjpg_UX1000_.jpg',
       'genre': 'Action, Crime',
       'trailerUrl': 'https://www.youtube.com/watch?v=EXeTwQWaywY',
       'rating': 'PG-13',
@@ -69,7 +69,7 @@ class AppData {
     {
       'title': 'Spider-Man: No Way Home',
       'image':
-          'https://image.tmdb.org/t/p/original/1g0mD1YMGfkBvQUv9nuv3I0WoJB.jpg',
+          'https://m.media-amazon.com/images/M/MV5BMmFiZGZjMmEtMTA0Ni00MzA2LTljMTYtZGI2MGJmZWYzZTQ2XkEyXkFqcGc@._V1_.jpg',
       'genre': 'Action, Adventure',
       'trailerUrl': 'https://www.youtube.com/watch?v=JfVOs4VSpmA',
       'rating': 'PG-13',
@@ -83,7 +83,7 @@ class AppData {
     {
       'title': 'Dune',
       'image':
-          'https://image.tmdb.org/t/p/original/d5NXSklZfsDf7tYpwCUga7t6pS7.jpg',
+          'https://m.media-amazon.com/images/M/MV5BNWIyNmU5MGYtZDZmNi00ZjAwLWJlYjgtZTc0ZGIxMDE4ZGYwXkEyXkFqcGc@._V1_.jpg',
       'genre': 'Sci-Fi, Adventure',
       'trailerUrl': 'https://www.youtube.com/watch?v=n9xhJrPXop4',
       'rating': 'PG-13',
