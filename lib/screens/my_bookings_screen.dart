@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../core/theme/app_colors.dart';
 import '../services/booking_service.dart';
 import '../services/auth_service.dart';
 import '../widgets/custom_button.dart';
@@ -62,7 +61,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     }).toList();
 
     return Scaffold(
-      backgroundColor: Colors.blueGrey[50],
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: Text(
           'My Bookings',
@@ -70,9 +69,9 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
         ),
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: AppColors.primaryBlue,
-          labelColor: AppColors.primaryBlue,
-          unselectedLabelColor: Colors.grey,
+          indicatorColor: Theme.of(context).colorScheme.primary,
+          labelColor: Theme.of(context).colorScheme.primary,
+          unselectedLabelColor: Colors.white70,
           labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.bold),
           tabs: [
             Tab(text: 'Active Bookings (${activeBookings.length})'),
@@ -104,7 +103,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             Icon(
               Icons.confirmation_number_outlined,
               size: 80,
-              color: Colors.grey[300],
+              color: Theme.of(context).colorScheme.outlineVariant,
             ),
             const SizedBox(height: 24),
             Text(
@@ -112,7 +111,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
               style: GoogleFonts.outfit(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Colors.grey[600],
+                color: Theme.of(context).colorScheme.outline,
               ),
             ),
             const SizedBox(height: 8),
@@ -121,7 +120,9 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                   ? "You haven't cancelled any tickets yet."
                   : "You haven't made any bookings yet.",
               textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(color: Colors.grey[500]),
+              style: GoogleFonts.outfit(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -148,11 +149,11 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.secondaryContainer,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -166,7 +167,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             style: GoogleFonts.outfit(
               fontSize: 22,
               fontWeight: FontWeight.bold,
-              color: const Color(0xFF1F2937),
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 16),
@@ -180,7 +181,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF8E9AAF),
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
@@ -190,7 +191,9 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                   'TOTAL AMOUNT',
                   style: GoogleFonts.outfit(
                     fontSize: 10,
-                    color: Colors.white.withOpacity(0.6),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSecondaryContainer.withValues(alpha: 0.6),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -199,7 +202,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                   style: GoogleFonts.outfit(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSecondaryContainer,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -239,16 +242,14 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             CustomButton(
               text: 'View Details',
               onPressed: () => _showBookingDetails(booking),
-              color: Colors.white,
-              textColor: Colors.black,
-              outlineColor: Colors.black,
+              isOutlined: true,
             ),
             const SizedBox(height: 12),
             CustomButton(
               text: 'Cancel Booking',
               onPressed: () => _confirmCancel(booking),
-              color: const Color(0xFF020617),
-              textColor: Colors.white,
+              color: Theme.of(context).colorScheme.errorContainer,
+              textColor: Theme.of(context).colorScheme.onErrorContainer,
             ),
           ],
         ],
@@ -260,7 +261,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -273,7 +274,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                 style: GoogleFonts.outfit(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: const Color(0xFF1F2937),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 24),
@@ -296,7 +297,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                 child: CustomButton(
                   text: 'Close',
                   onPressed: () => Navigator.pop(context),
-                  color: AppColors.primaryBlue,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ),
             ],
@@ -317,7 +318,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             child: Text(
               '$label:',
               style: GoogleFonts.outfit(
-                color: Colors.grey[600],
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -326,7 +327,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             child: Text(
               value,
               style: GoogleFonts.outfit(
-                color: const Color(0xFF1F2937),
+                color: Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -352,14 +353,14 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
           Text(
             label,
             style: GoogleFonts.outfit(
-              color: Colors.grey[600],
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontWeight: FontWeight.w500,
             ),
           ),
           Text(
             value,
             style: GoogleFonts.outfit(
-              color: Colors.grey[800],
+              color: Theme.of(context).colorScheme.onSurface,
               fontWeight: FontWeight.w600,
             ),
           ),

@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../services/booking_service.dart';
 import '../services/auth_service.dart';
 import 'my_bookings_screen.dart';
+import '../core/theme/app_colors.dart';
 
 class PaymentScreen extends StatefulWidget {
   final String movieTitle;
@@ -50,11 +51,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F4F6),
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        foregroundColor: Colors.black,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
@@ -77,13 +78,16 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
                         height: 1.1,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Secure payment for your movie tickets',
                       style: GoogleFonts.outfit(
-                        color: Colors.grey[600],
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.6),
                         fontSize: 16,
                       ),
                     ),
@@ -125,7 +129,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFF6D87AE),
+        color: Theme.of(context).colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(24),
       ),
       child: Form(
@@ -138,7 +142,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               style: GoogleFonts.outfit(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
               ),
             ),
             const SizedBox(height: 32),
@@ -147,7 +151,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               'Payment Method',
               style: GoogleFonts.outfit(
                 fontWeight: FontWeight.bold,
-                color: Colors.black,
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
                 fontSize: 14,
               ),
             ),
@@ -248,9 +252,15 @@ class _PaymentScreenState extends State<PaymentScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.1),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onPrimaryContainer.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white10),
+                border: Border.all(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onPrimaryContainer.withValues(alpha: 0.1),
+                ),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -266,7 +276,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           style: GoogleFonts.outfit(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onPrimaryContainer,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -274,7 +286,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           'Your payment information is encrypted and secure. We never store your full card details.',
                           style: GoogleFonts.outfit(
                             fontSize: 11,
-                            color: Colors.black,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onPrimaryContainer
+                                .withValues(alpha: 0.7),
                             height: 1.4,
                           ),
                         ),
@@ -306,7 +321,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
                             setState(() => _agreedToPolicy = v!);
                             state.didChange(v);
                           },
-                          activeColor: const Color(0xFF006D7E),
+                          side: const BorderSide(color: Colors.white, width: 2),
+                          checkColor: AppColors.primaryBlue,
+                          fillColor: WidgetStateProperty.resolveWith((states) {
+                            if (states.contains(WidgetState.selected)) {
+                              return Colors.white;
+                            }
+                            return Colors.transparent;
+                          }),
                         ),
                         Expanded(
                           child: Text.rich(
@@ -314,7 +336,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                               text: 'I agree to the ',
                               style: GoogleFonts.outfit(
                                 fontSize: 13,
-                                color: Colors.black,
+                                color: Colors.white,
                               ),
                               children: [
                                 TextSpan(
@@ -322,6 +344,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                                   style: const TextStyle(
                                     decoration: TextDecoration.underline,
                                     fontWeight: FontWeight.bold,
+                                    color: Colors.white,
                                   ),
                                 ),
                                 const TextSpan(
@@ -340,7 +363,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         child: Text(
                           state.errorText!,
                           style: GoogleFonts.outfit(
-                            color: Colors.red[700],
+                            color: Theme.of(context).colorScheme.error,
                             fontSize: 12,
                           ),
                         ),
@@ -358,7 +381,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     onPressed: () => Navigator.pop(context),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.white,
-                      side: const BorderSide(color: Colors.white30),
+                      side: BorderSide(
+                        color: Colors.white.withValues(alpha: 0.3),
+                      ),
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -372,7 +397,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   child: ElevatedButton(
                     onPressed: _processPayment,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF023E5C),
+                      backgroundColor: AppColors.paymentButton,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
@@ -395,7 +420,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFF6D87AE),
+        color: Theme.of(context).colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
@@ -406,7 +431,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             style: GoogleFonts.outfit(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSecondaryContainer,
             ),
           ),
           const SizedBox(height: 32),
@@ -423,7 +448,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
           _infoSection('NUMBER OF TICKETS', '${widget.ticketCount} Ticket(s)'),
 
           const SizedBox(height: 32),
-          const Divider(color: Colors.white24),
+          Divider(
+            color: Theme.of(
+              context,
+            ).colorScheme.onSecondaryContainer.withValues(alpha: 0.2),
+          ),
           const SizedBox(height: 32),
 
           _priceRow('Subtotal', 'LKR ${widget.amount}'),
@@ -434,7 +463,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSecondaryContainer.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
@@ -445,7 +476,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   style: GoogleFonts.outfit(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white.withValues(alpha: 0.6),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSecondaryContainer.withValues(alpha: 0.6),
                   ),
                 ),
                 Flexible(
@@ -455,7 +488,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     style: GoogleFonts.outfit(
                       fontSize: isWide ? 16 : 20,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSecondaryContainer,
                     ),
                   ),
                 ),
@@ -467,7 +500,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.05),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSecondaryContainer.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
@@ -481,7 +516,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       style: GoogleFonts.outfit(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSecondaryContainer,
                       ),
                     ),
                   ],
@@ -491,7 +528,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   'Cancel anytime and get 50% of your ticket price back. 50% will be deducted as cancellation fee.',
                   style: GoogleFonts.outfit(
                     fontSize: 11,
-                    color: Colors.white70,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSecondaryContainer.withValues(alpha: 0.7),
                     height: 1.4,
                   ),
                 ),
@@ -514,7 +553,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               _paymentMethod == value
                   ? Icons.radio_button_checked
                   : Icons.radio_button_off,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onPrimaryContainer,
               size: 20,
             ),
             const SizedBox(width: 12),
@@ -522,7 +561,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               value,
               style: GoogleFonts.outfit(
                 fontSize: 16,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
                 fontWeight: _paymentMethod == value
                     ? FontWeight.bold
                     : FontWeight.normal,
@@ -552,7 +591,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           style: GoogleFonts.outfit(
             fontSize: 14,
             fontWeight: FontWeight.bold,
-            color: Colors.black,
+            color: Theme.of(context).colorScheme.onPrimaryContainer,
           ),
         ),
         const SizedBox(height: 12),
@@ -562,14 +601,22 @@ class _PaymentScreenState extends State<PaymentScreen> {
           inputFormatters: formatters,
           maxLength: maxLength,
           validator: validator,
-          style: GoogleFonts.outfit(color: Colors.black),
+          style: GoogleFonts.outfit(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
           decoration: InputDecoration(
             hintText: placeholder,
-            hintStyle: GoogleFonts.outfit(color: Colors.black45),
+            hintStyle: GoogleFonts.outfit(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.4),
+            ),
             filled: true,
-            fillColor: const Color(0xFFD1D5DB).withValues(alpha: 0.8),
+            fillColor: Theme.of(
+              context,
+            ).colorScheme.onPrimaryContainer.withValues(alpha: 0.1),
             errorStyle: GoogleFonts.outfit(
-              color: Colors.red[900],
+              color: Theme.of(context).colorScheme.error,
               fontWeight: FontWeight.bold,
               fontSize: 12,
             ),
@@ -584,11 +631,17 @@ class _PaymentScreenState extends State<PaymentScreen> {
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.red, width: 2),
+              borderSide: BorderSide(
+                color: Theme.of(context).colorScheme.error,
+                width: 2,
+              ),
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.red, width: 2),
+              borderSide: BorderSide(
+                color: Theme.of(context).colorScheme.error,
+                width: 2,
+              ),
             ),
           ),
         ),
@@ -598,7 +651,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
             hint,
             style: GoogleFonts.outfit(
               fontSize: 10,
-              color: Colors.black54,
+              color: Theme.of(
+                context,
+              ).colorScheme.onPrimaryContainer.withValues(alpha: 0.6),
               fontStyle: FontStyle.italic,
             ),
           ),
@@ -616,7 +671,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
           style: GoogleFonts.outfit(
             fontSize: 11,
             fontWeight: FontWeight.bold,
-            color: Colors.white.withValues(alpha: 0.6),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSecondaryContainer.withValues(alpha: 0.6),
             letterSpacing: 1,
           ),
         ),
@@ -626,7 +683,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           style: GoogleFonts.outfit(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSecondaryContainer,
           ),
         ),
       ],
@@ -641,7 +698,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
           label,
           style: GoogleFonts.outfit(
             fontSize: 16,
-            color: Colors.white.withValues(alpha: 0.8),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSecondaryContainer.withValues(alpha: 0.8),
           ),
         ),
         Text(
@@ -649,7 +708,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           style: GoogleFonts.outfit(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSecondaryContainer,
           ),
         ),
       ],
@@ -685,11 +744,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
     if (!mounted) return;
 
-  // Booking Confirmation Dialog
+    // Booking Confirmation Dialog
     showGeneralDialog(
       context: context,
       barrierDismissible: false,
-      barrierColor: Colors.black.withValues(alpha: 0.85),
+      barrierColor: Colors.black.withAlpha(200),
       transitionDuration: const Duration(milliseconds: 400),
       pageBuilder: (context, anim1, anim2) {
         return Center(
@@ -697,7 +756,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             margin: const EdgeInsets.symmetric(horizontal: 24),
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
-              color: const Color(0xFF6D87AE),
+              color: AppColors.primaryBlue,
               borderRadius: BorderRadius.circular(32),
               boxShadow: [
                 BoxShadow(
@@ -723,13 +782,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         child: Container(
                           width: 80,
                           height: 80,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF4ADE80),
+                          decoration: BoxDecoration(
+                            color: Colors.greenAccent[400],
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.check,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                             size: 50,
                           ),
                         ),
@@ -739,6 +798,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   const SizedBox(height: 32),
                   Text(
                     'Booking Confirmed!',
+                    textAlign: TextAlign.center,
                     style: GoogleFonts.outfit(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
@@ -786,7 +846,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
                               style: GoogleFonts.outfit(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.white.withValues(alpha: 0.6),
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onPrimaryContainer
+                                    .withValues(alpha: 0.6),
                               ),
                             ),
                             Text(
@@ -794,7 +857,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
                               style: GoogleFonts.outfit(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onPrimaryContainer,
                               ),
                             ),
                           ],
@@ -815,7 +880,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         );
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF023E5C),
+                        backgroundColor: AppColors.paymentButton,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 18),
                         shape: RoundedRectangleBorder(
@@ -860,7 +925,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
           label,
           style: GoogleFonts.outfit(
             fontSize: 13,
-            color: Colors.white.withValues(alpha: 0.6),
+            color: Theme.of(
+              context,
+            ).colorScheme.onPrimaryContainer.withValues(alpha: 0.6),
           ),
         ),
         const SizedBox(width: 16),
@@ -871,7 +938,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             style: GoogleFonts.outfit(
               fontSize: 13,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onPrimaryContainer,
             ),
           ),
         ),

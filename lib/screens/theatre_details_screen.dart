@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../core/theme/app_colors.dart';
 import '../widgets/custom_button.dart';
 import 'movie_details_screen.dart';
 import '../services/movie_service.dart';
@@ -110,11 +109,13 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: AppColors.primaryBlue,
+                      color: Theme.of(context).colorScheme.primaryContainer,
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.primaryBlue.withValues(alpha: 0.3),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primary.withValues(alpha: 0.2),
                           blurRadius: 15,
                           offset: const Offset(0, 8),
                         ),
@@ -126,7 +127,9 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
                         Text(
                           widget.theatre['name'],
                           style: GoogleFonts.outfit(
-                            color: Colors.white,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onPrimaryContainer,
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
                           ),
@@ -134,9 +137,12 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
                         const SizedBox(height: 12),
                         Row(
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.location_on_rounded,
-                              color: Colors.white70,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onPrimaryContainer
+                                  .withValues(alpha: 0.7),
                               size: 18,
                             ),
                             const SizedBox(width: 8),
@@ -144,7 +150,10 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
                               child: Text(
                                 widget.theatre['location'],
                                 style: GoogleFonts.outfit(
-                                  color: Colors.white.withValues(alpha: 0.9),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onPrimaryContainer
+                                      .withValues(alpha: 0.9),
                                   fontSize: 15,
                                 ),
                               ),
@@ -165,7 +174,7 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
                         style: GoogleFonts.outfit(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.headerBackground,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       Container(
@@ -174,13 +183,15 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.primaryBlue.withValues(alpha: 0.1),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
                           '${_movies.length} Movies',
                           style: GoogleFonts.outfit(
-                            color: AppColors.primaryBlue,
+                            color: Theme.of(context).colorScheme.primary,
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
                           ),
@@ -198,7 +209,9 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
                             Icon(
                               Icons.movie_filter_rounded,
                               size: 64,
-                              color: AppColors.textMuted.withValues(alpha: 0.3),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.outline.withValues(alpha: 0.3),
                             ),
                             const SizedBox(height: 16),
                             Text(
@@ -206,7 +219,7 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
                               style: GoogleFonts.outfit(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w600,
-                                color: AppColors.textMuted,
+                                color: Theme.of(context).colorScheme.outline,
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -215,9 +228,9 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
                               textAlign: TextAlign.center,
                               style: GoogleFonts.outfit(
                                 fontSize: 14,
-                                color: AppColors.textMuted.withValues(
-                                  alpha: 0.7,
-                                ),
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.outline.withValues(alpha: 0.7),
                               ),
                             ),
                           ],
@@ -235,9 +248,16 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
                         return Container(
                           height: 160,
                           decoration: BoxDecoration(
-                            color: AppColors.cardGray,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: Colors.white, width: 2),
+                            border: Border.all(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.outlineVariant,
+                              width: 2,
+                            ),
                           ),
                           child: Row(
                             children: [
@@ -259,10 +279,14 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
                                               return Container(
                                                 width: 110,
                                                 height: 160,
-                                                color: Colors.grey[300],
-                                                child: const Icon(
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .surfaceContainerHighest,
+                                                child: Icon(
                                                   Icons.image_not_supported,
-                                                  color: Colors.grey,
+                                                  color: Theme.of(
+                                                    context,
+                                                  ).colorScheme.outline,
                                                 ),
                                               );
                                             },
@@ -277,10 +301,14 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
                                               return Container(
                                                 width: 110,
                                                 height: 160,
-                                                color: Colors.grey[300],
-                                                child: const Icon(
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .surfaceContainerHighest,
+                                                child: Icon(
                                                   Icons.image_not_supported,
-                                                  color: Colors.grey,
+                                                  color: Theme.of(
+                                                    context,
+                                                  ).colorScheme.outline,
                                                 ),
                                               );
                                             },
@@ -301,7 +329,9 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
                                         style: GoogleFonts.outfit(
                                           fontSize: 18,
                                           fontWeight: FontWeight.bold,
-                                          color: AppColors.headerBackground,
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onSurface,
                                           height: 1.1,
                                         ),
                                       ),
@@ -311,7 +341,10 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: GoogleFonts.outfit(
-                                          color: AppColors.textMuted,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.6),
                                           fontSize: 13,
                                         ),
                                       ),

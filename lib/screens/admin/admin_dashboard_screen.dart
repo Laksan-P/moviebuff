@@ -10,6 +10,7 @@ import '../../services/auth_service.dart';
 import '../../services/movie_service.dart';
 import '../../services/theatre_service.dart';
 import '../login_screen.dart';
+import '../../core/theme/app_colors.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -92,11 +93,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         '${_getMonth(now.month)} ${now.day}, ${now.year} ${_formatTime(now)}';
 
     return Scaffold(
-      backgroundColor: Colors.grey[50], // Very light grey background
+      backgroundColor: Theme.of(
+        context,
+      ).colorScheme.surface, // Adaptive background
       appBar: AppBar(
         title: const Text('Admin Dashboard'),
-        backgroundColor: const Color(0xFF020617),
-        foregroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+        foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -156,13 +159,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               style: GoogleFonts.outfit(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
-                color: const Color(0xFF020617),
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               "Here's your business overview. Last updated: $dateStr",
-              style: GoogleFonts.outfit(fontSize: 14, color: Colors.grey[600]),
+              style: GoogleFonts.outfit(
+                fontSize: 14,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
             ),
             const SizedBox(height: 32),
 
@@ -238,7 +246,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: const Color(0xffa8a89f),
+                color: Theme.of(context).colorScheme.tertiaryContainer,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
@@ -249,7 +257,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     style: GoogleFonts.outfit(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onTertiaryContainer,
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -310,11 +318,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             double.infinity, // Ensures the card takes the full available width
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: const Color(0xFFAFB8B9), // Muted greyish-green per mockup
+          color: Theme.of(context).colorScheme.secondaryContainer,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
+              color: Theme.of(
+                context,
+              ).colorScheme.shadow.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -331,15 +341,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   style: GoogleFonts.outfit(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFF546E7A),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSecondaryContainer.withValues(alpha: 0.6),
                     letterSpacing: 1,
                   ),
                 ),
                 if (onTap != null)
-                  const Icon(
+                  Icon(
                     Icons.arrow_forward_ios,
                     size: 14,
-                    color: Color(0xFF546E7A),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSecondaryContainer.withValues(alpha: 0.6),
                   ),
               ],
             ),
@@ -349,7 +363,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               style: GoogleFonts.outfit(
                 fontSize: 32,
                 fontWeight: FontWeight.w900,
-                color: isRevenue ? const Color(0xFF00695C) : Colors.black87,
+                color: isRevenue
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).colorScheme.onSecondaryContainer,
               ),
             ),
             if (subValue != null) ...[
@@ -359,7 +375,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 style: GoogleFonts.outfit(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
-                  color: subValueColor ?? const Color(0xFF00695C),
+                  color:
+                      subValueColor ?? Theme.of(context).colorScheme.secondary,
                 ),
               ),
             ],
@@ -373,7 +390,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFFAFB8B9),
+        color: Theme.of(context).colorScheme.tertiaryContainer,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -387,7 +404,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 style: GoogleFonts.outfit(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                  color: Theme.of(context).colorScheme.onTertiaryContainer,
                 ),
               ),
               GestureDetector(
@@ -404,7 +421,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   style: GoogleFonts.outfit(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFF00695C),
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
               ),
@@ -432,8 +449,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6D87AE),
-                foregroundColor: Colors.white,
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -451,7 +468,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFFAFB8B9),
+        color: Theme.of(context).colorScheme.tertiaryContainer,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -465,7 +482,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 style: GoogleFonts.outfit(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                  color: Theme.of(context).colorScheme.onTertiaryContainer,
                 ),
               ),
               GestureDetector(
@@ -482,7 +499,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   style: GoogleFonts.outfit(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFF00695C),
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
               ),
@@ -511,8 +528,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6D87AE),
-                foregroundColor: Colors.white,
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -530,7 +547,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFFAFB8B9),
+        color: Theme.of(context).colorScheme.tertiaryContainer,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -544,7 +561,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 style: GoogleFonts.outfit(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                  color: Theme.of(context).colorScheme.onTertiaryContainer,
                 ),
               ),
               GestureDetector(
@@ -561,7 +578,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   style: GoogleFonts.outfit(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFF00695C),
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
               ),
@@ -588,7 +605,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     SizedBox(width: 100, child: _buildTableHead('STATUS')),
                   ],
                 ),
-                const Divider(height: 24, color: Colors.black26),
+                const Divider(
+                  height: 24,
+                  color: Colors
+                      .transparent, // Using transparent as the surface provides enough separation or use outline
+                ),
 
                 // Data Rows
                 ..._bookings.take(5).map((booking) {
@@ -615,7 +636,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             style: GoogleFonts.outfit(
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
-                              color: Colors.black87,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                         ),
@@ -636,7 +657,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                 email,
                                 style: GoogleFonts.outfit(
                                   fontSize: 11,
-                                  color: Colors.black54,
+                                  color: Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.6),
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -688,7 +710,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             style: GoogleFonts.outfit(
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
-                              color: const Color(0xFF00695C),
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                           ),
                         ),
@@ -702,8 +724,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             ),
                             decoration: BoxDecoration(
                               color: status == 'Confirmed'
-                                  ? Colors.green.withValues(alpha: 0.1)
-                                  : Colors.red.withValues(alpha: 0.1),
+                                  ? AppColors.success.withValues(alpha: 0.1)
+                                  : Theme.of(
+                                      context,
+                                    ).colorScheme.error.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
@@ -712,8 +736,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
                                 color: status == 'Confirmed'
-                                    ? Colors.green
-                                    : Colors.red,
+                                    ? AppColors.success
+                                    : Theme.of(context).colorScheme.error,
                               ),
                               textAlign: TextAlign.center,
                             ),
@@ -746,13 +770,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           style: GoogleFonts.outfit(
             fontWeight: FontWeight.bold,
             fontSize: 15,
-            color: Colors.black87,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 2),
         Text(
           subtitle,
-          style: GoogleFonts.outfit(fontSize: 13, color: Colors.black54),
+          style: GoogleFonts.outfit(
+            fontSize: 13,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.5),
+          ),
         ),
       ],
     );
@@ -764,7 +793,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       style: GoogleFonts.outfit(
         fontSize: 11,
         fontWeight: FontWeight.bold,
-        color: Colors.black54,
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
         letterSpacing: 0.5,
       ),
     );
@@ -774,8 +803,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return ElevatedButton(
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF6D87AE),
-        foregroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),

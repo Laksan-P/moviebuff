@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../core/theme/app_colors.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_text_field.dart';
 import 'signup_screen.dart';
@@ -85,9 +84,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     horizontal: 32,
                     vertical: 48,
                   ),
-                  decoration: const BoxDecoration(
-                    color: AppColors.primaryBlue,
-                    borderRadius: BorderRadius.only(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary,
+                    borderRadius: const BorderRadius.only(
                       bottomLeft: Radius.circular(32),
                       bottomRight: Radius.circular(32),
                     ),
@@ -103,7 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: GoogleFonts.outfit(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onPrimary,
                           height: 1.1,
                         ),
                       ),
@@ -113,7 +112,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         textAlign: TextAlign.center,
                         style: GoogleFonts.outfit(
                           fontSize: 16,
-                          color: Colors.white.withValues(alpha: 0.9),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onPrimary.withValues(alpha: 0.9),
                         ),
                       ),
                     ],
@@ -130,7 +131,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         // Toggle Switch
                         Container(
                           decoration: BoxDecoration(
-                            color: Colors.grey[100],
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest
+                                .withValues(alpha: 0.3),
                             borderRadius: BorderRadius.circular(50),
                           ),
                           padding: const EdgeInsets.all(4),
@@ -143,11 +147,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                   vertical: 8,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: Theme.of(context).colorScheme.surface,
                                   borderRadius: BorderRadius.circular(50),
-                                  boxShadow: const [
+                                  boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black12,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .shadow
+                                          .withValues(alpha: 0.1),
                                       blurRadius: 2,
                                     ),
                                   ],
@@ -156,7 +163,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                   'Login',
                                   style: GoogleFonts.outfit(
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.grey[800],
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface,
                                   ),
                                 ),
                               ),
@@ -195,7 +204,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                     'Register',
                                     style: GoogleFonts.outfit(
                                       fontWeight: FontWeight.bold,
-                                      color: Colors.grey[500],
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.5),
                                     ),
                                   ),
                                 ),
@@ -210,7 +222,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           style: GoogleFonts.outfit(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: Colors.grey[800],
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -218,7 +230,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           'Enter your credentials to continue',
                           style: GoogleFonts.outfit(
                             fontSize: 14,
-                            color: Colors.grey[500],
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.5),
                           ),
                         ),
                         const SizedBox(height: 32),
@@ -250,14 +264,18 @@ class _LoginScreenState extends State<LoginScreen> {
                           children: [
                             Checkbox(
                               value: _rememberMe,
-                              activeColor: AppColors.primaryBlue,
+                              activeColor: Theme.of(
+                                context,
+                              ).colorScheme.primary,
                               onChanged: (v) =>
                                   setState(() => _rememberMe = v ?? true),
                             ),
                             Text(
                               'Remember me',
                               style: GoogleFonts.outfit(
-                                color: Colors.grey[600],
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withValues(alpha: 0.7),
                                 fontSize: 14,
                               ),
                             ),
@@ -309,7 +327,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               child: Text(
                                 'Create one',
                                 style: GoogleFonts.outfit(
-                                  color: AppColors.primaryBlue,
+                                  color: Theme.of(context).colorScheme.primary,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../core/theme/app_colors.dart';
 import 'theatre_details_screen.dart';
 import '../services/theatre_service.dart';
 
@@ -39,6 +38,9 @@ class _TheatresScreenState extends State<TheatresScreen> {
           'Theatres',
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
         ),
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
+        elevation: 0,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -55,7 +57,7 @@ class _TheatresScreenState extends State<TheatresScreen> {
                           style: GoogleFonts.outfit(
                             fontSize: 26,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.black,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -63,7 +65,9 @@ class _TheatresScreenState extends State<TheatresScreen> {
                           'Browse available theatres and select from exciting movies with multiple showtimes',
                           style: GoogleFonts.outfit(
                             fontSize: 14,
-                            color: AppColors.textMuted,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -94,8 +98,13 @@ class _TheatresScreenState extends State<TheatresScreen> {
                           child: Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: AppColors.cardGray,
+                              color: Theme.of(context).colorScheme.surface,
                               borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.outlineVariant,
+                              ),
                             ),
                             child: Row(
                               children: [
@@ -109,22 +118,30 @@ class _TheatresScreenState extends State<TheatresScreen> {
                                         style: GoogleFonts.outfit(
                                           fontSize: 17,
                                           fontWeight: FontWeight.bold,
-                                          color: AppColors.headerBackground,
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.primary,
                                         ),
                                       ),
                                       const SizedBox(height: 4),
                                       Row(
                                         children: [
-                                          const Icon(
+                                          Icon(
                                             Icons.location_on_outlined,
                                             size: 14,
-                                            color: AppColors.textMuted,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withValues(alpha: 0.6),
                                           ),
                                           const SizedBox(width: 4),
                                           Text(
                                             theatre['location'] as String,
                                             style: GoogleFonts.outfit(
-                                              color: AppColors.textMuted,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface
+                                                  .withValues(alpha: 0.6),
                                               fontSize: 13,
                                             ),
                                           ),
@@ -133,9 +150,9 @@ class _TheatresScreenState extends State<TheatresScreen> {
                                     ],
                                   ),
                                 ),
-                                const Icon(
+                                Icon(
                                   Icons.chevron_right,
-                                  color: AppColors.headerBackground,
+                                  color: Theme.of(context).colorScheme.primary,
                                 ),
                               ],
                             ),

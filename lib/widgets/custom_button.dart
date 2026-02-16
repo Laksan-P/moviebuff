@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../core/theme/app_colors.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class CustomButton extends StatelessWidget {
@@ -35,17 +34,19 @@ class CustomButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         color: isOutlined
             ? Colors.transparent
-            : (color ?? AppColors.primaryBlue),
+            : (color ?? Theme.of(context).colorScheme.primary),
         border: isOutlined || outlineColor != null
             ? Border.all(
-                color: outlineColor ?? AppColors.primaryBlue,
+                color: outlineColor ?? Theme.of(context).colorScheme.primary,
                 width: 1.5,
               )
             : null,
         boxShadow: !isOutlined && outlineColor == null && !isLoading
             ? [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.shadow.withValues(alpha: 0.15),
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
@@ -61,11 +62,13 @@ class CustomButton extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16),
         ),
         child: isLoading
-            ? const SizedBox(
+            ? SizedBox(
                 height: 20,
                 width: 20,
                 child: CircularProgressIndicator(
-                  color: Colors.white,
+                  color: isOutlined
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).colorScheme.onPrimary,
                   strokeWidth: 2,
                 ),
               )
@@ -76,7 +79,9 @@ class CustomButton extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                   color:
                       textColor ??
-                      (isOutlined ? AppColors.primaryBlue : Colors.white),
+                      (isOutlined
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).colorScheme.onPrimary),
                 ),
               ),
       ),

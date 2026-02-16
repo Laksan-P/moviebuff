@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../core/theme/app_colors.dart';
 import '../../services/movie_service.dart';
 import '../../services/theatre_service.dart';
 
@@ -83,7 +82,7 @@ class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) {
           return Dialog(
-            backgroundColor: const Color(0xffAFB8B9),
+            backgroundColor: Theme.of(context).colorScheme.surface,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
             ),
@@ -98,7 +97,7 @@ class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
                     style: GoogleFonts.outfit(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFF020617),
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -253,7 +252,7 @@ class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
         style: GoogleFonts.outfit(
           fontSize: 12,
           fontWeight: FontWeight.bold,
-          color: const Color(0xFF455A64),
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
           letterSpacing: 0.5,
         ),
       ),
@@ -267,8 +266,11 @@ class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: TextField(
         controller: controller,
@@ -278,7 +280,9 @@ class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
           border: InputBorder.none,
           contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
-        style: GoogleFonts.outfit(),
+        style: GoogleFonts.outfit(
+          color: Theme.of(context).colorScheme.onSurface,
+        ),
       ),
     );
   }
@@ -292,18 +296,31 @@ class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: selected,
           isExpanded: true,
+          dropdownColor: Theme.of(context).colorScheme.surface,
+          icon: Icon(
+            Icons.arrow_drop_down,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
           items: options
               .map(
                 (e) => DropdownMenuItem(
                   value: e,
-                  child: Text(e, style: GoogleFonts.outfit()),
+                  child: Text(
+                    e,
+                    style: GoogleFonts.outfit(
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
                 ),
               )
               .toList(),
@@ -322,19 +339,37 @@ class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: selected,
-          hint: Text('Select Theatre', style: GoogleFonts.outfit()),
+          hint: Text(
+            'Select Theatre',
+            style: GoogleFonts.outfit(
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
           isExpanded: true,
+          dropdownColor: Theme.of(context).colorScheme.surface,
+          icon: Icon(
+            Icons.arrow_drop_down,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
           items: theatres
               .map(
                 (t) => DropdownMenuItem<String>(
                   value: t['name'] as String,
-                  child: Text(t['name'] as String, style: GoogleFonts.outfit()),
+                  child: Text(
+                    t['name'] as String,
+                    style: GoogleFonts.outfit(
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
                 ),
               )
               .toList(),
@@ -351,8 +386,13 @@ class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(
+            context,
+          ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outlineVariant,
+          ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -360,10 +400,16 @@ class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
             Text(
               date.isEmpty ? 'Select Date' : date,
               style: GoogleFonts.outfit(
-                color: date.isEmpty ? Colors.grey : Colors.black,
+                color: date.isEmpty
+                    ? Theme.of(context).colorScheme.onSurfaceVariant
+                    : Theme.of(context).colorScheme.onSurface,
               ),
             ),
-            const Icon(Icons.calendar_today, size: 18, color: Colors.black54),
+            Icon(
+              Icons.calendar_today,
+              size: 18,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ],
         ),
       ),
@@ -402,7 +448,7 @@ class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
                   item,
                   style: GoogleFonts.outfit(
                     fontSize: 14,
-                    color: const Color(0xFF020617),
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ],
@@ -424,8 +470,8 @@ class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
         ElevatedButton(
           onPressed: onAction,
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF6D87AE),
-            foregroundColor: Colors.white,
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            foregroundColor: Theme.of(context).colorScheme.onPrimary,
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -441,8 +487,8 @@ class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
         OutlinedButton(
           onPressed: onCancel,
           style: OutlinedButton.styleFrom(
-            foregroundColor: const Color(0xFF6D87AE),
-            side: const BorderSide(color: Color(0xFF6D87AE)),
+            foregroundColor: Theme.of(context).colorScheme.primary,
+            side: BorderSide(color: Theme.of(context).colorScheme.primary),
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -467,8 +513,8 @@ class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
       appBar: AppBar(title: const Text('Manage Movies')),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddMovieDialog,
-        backgroundColor: AppColors.cinemaRed,
-        child: const Icon(Icons.add, color: Colors.white),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        child: Icon(Icons.add, color: Theme.of(context).colorScheme.onPrimary),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -481,7 +527,7 @@ class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
                 return Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: const [
                       BoxShadow(color: Colors.black12, blurRadius: 4),
@@ -505,10 +551,17 @@ class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
                                   fit: BoxFit.cover,
                                 )
                               : null,
-                          color: Colors.grey[200],
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.surfaceContainerHighest,
                         ),
                         child: movie['image'] == null || movie['image']!.isEmpty
-                            ? const Icon(Icons.movie, color: Colors.grey)
+                            ? Icon(
+                                Icons.movie,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              )
                             : null,
                       ),
                       const SizedBox(width: 16),
@@ -525,7 +578,11 @@ class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
                             ),
                             Text(
                               movie['genre']!,
-                              style: GoogleFonts.outfit(color: Colors.grey),
+                              style: GoogleFonts.outfit(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
                             ),
                           ],
                         ),

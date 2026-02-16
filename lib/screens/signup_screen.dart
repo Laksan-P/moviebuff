@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../core/theme/app_colors.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_text_field.dart';
 import 'login_screen.dart';
@@ -104,9 +103,9 @@ class _SignupScreenState extends State<SignupScreen> {
                     horizontal: 32,
                     vertical: 48,
                   ),
-                  decoration: const BoxDecoration(
-                    color: AppColors.primaryBlue,
-                    borderRadius: BorderRadius.only(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary,
+                    borderRadius: const BorderRadius.only(
                       bottomLeft: Radius.circular(32),
                       bottomRight: Radius.circular(32),
                     ),
@@ -121,7 +120,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         style: GoogleFonts.outfit(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onPrimary,
                           height: 1.1,
                         ),
                       ),
@@ -131,7 +130,9 @@ class _SignupScreenState extends State<SignupScreen> {
                         textAlign: TextAlign.center,
                         style: GoogleFonts.outfit(
                           fontSize: 16,
-                          color: Colors.white.withValues(alpha: 0.9),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onPrimary.withValues(alpha: 0.9),
                         ),
                       ),
                     ],
@@ -148,7 +149,10 @@ class _SignupScreenState extends State<SignupScreen> {
                         // Toggle Switch
                         Container(
                           decoration: BoxDecoration(
-                            color: Colors.grey[100],
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest
+                                .withValues(alpha: 0.3),
                             borderRadius: BorderRadius.circular(50),
                           ),
                           padding: const EdgeInsets.all(4),
@@ -190,7 +194,10 @@ class _SignupScreenState extends State<SignupScreen> {
                                     'Login',
                                     style: GoogleFonts.outfit(
                                       fontWeight: FontWeight.bold,
-                                      color: Colors.grey[500],
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.5),
                                     ),
                                   ),
                                 ),
@@ -201,11 +208,14 @@ class _SignupScreenState extends State<SignupScreen> {
                                   vertical: 8,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: Theme.of(context).colorScheme.surface,
                                   borderRadius: BorderRadius.circular(50),
-                                  boxShadow: const [
+                                  boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black12,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .shadow
+                                          .withValues(alpha: 0.1),
                                       blurRadius: 2,
                                     ),
                                   ],
@@ -214,7 +224,9 @@ class _SignupScreenState extends State<SignupScreen> {
                                   'Register',
                                   style: GoogleFonts.outfit(
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.grey[800],
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface,
                                   ),
                                 ),
                               ),
@@ -228,7 +240,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           style: GoogleFonts.outfit(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: Colors.grey[800],
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -236,7 +248,9 @@ class _SignupScreenState extends State<SignupScreen> {
                           'Start your journey with us today',
                           style: GoogleFonts.outfit(
                             fontSize: 14,
-                            color: Colors.grey[500],
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.5),
                           ),
                         ),
                         const SizedBox(height: 32),
@@ -292,7 +306,9 @@ class _SignupScreenState extends State<SignupScreen> {
                           children: [
                             Checkbox(
                               value: _termsAccepted,
-                              activeColor: AppColors.primaryBlue,
+                              activeColor: Theme.of(
+                                context,
+                              ).colorScheme.primary,
                               onChanged: (v) =>
                                   setState(() => _termsAccepted = v!),
                             ),
@@ -300,7 +316,8 @@ class _SignupScreenState extends State<SignupScreen> {
                               child: Text(
                                 'I agree to the terms of service',
                                 style: GoogleFonts.outfit(
-                                  color: Colors.grey[600],
+                                  color: Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.7),
                                   fontSize: 14,
                                 ),
                               ),
@@ -354,7 +371,7 @@ class _SignupScreenState extends State<SignupScreen> {
                               child: Text(
                                 'Sign In',
                                 style: GoogleFonts.outfit(
-                                  color: AppColors.primaryBlue,
+                                  color: Theme.of(context).colorScheme.primary,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),

@@ -27,7 +27,9 @@ class MovieCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
+              color: Theme.of(
+                context,
+              ).colorScheme.shadow.withValues(alpha: 0.1),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -43,9 +45,15 @@ class MovieCard extends StatelessWidget {
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
                   return Container(
-                    color: Colors.grey[300],
-                    child: const Center(
-                      child: Icon(Icons.movie, size: 50, color: Colors.grey),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
+                    child: Center(
+                      child: Icon(
+                        Icons.movie,
+                        size: 50,
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
                     ),
                   );
                 },
@@ -110,7 +118,7 @@ class MovieCard extends StatelessWidget {
                         child: Text(
                           genre,
                           style: GoogleFonts.outfit(
-                            color: Colors.grey[300],
+                            color: Colors.white.withValues(alpha: 0.7),
                             fontSize: 12,
                           ),
                           maxLines: 1,

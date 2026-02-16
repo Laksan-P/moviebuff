@@ -41,12 +41,15 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF6D87AE)),
+          icon: Icon(
+            Icons.arrow_back,
+            color: Theme.of(context).colorScheme.primary,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: GestureDetector(
@@ -54,7 +57,7 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
           child: Text(
             'Back to Dashboard',
             style: GoogleFonts.outfit(
-              color: const Color(0xFF6D87AE),
+              color: Theme.of(context).colorScheme.primary,
               fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
@@ -64,8 +67,8 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddShowtimeDialog,
-        backgroundColor: const Color(0xFF023E5C),
-        child: const Icon(Icons.add, color: Colors.white),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        child: Icon(Icons.add, color: Theme.of(context).colorScheme.onPrimary),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -79,7 +82,7 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                     style: GoogleFonts.outfit(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFF020617),
+                      color: Theme.of(context).colorScheme.onSurface,
                       height: 1.1,
                     ),
                   ),
@@ -88,7 +91,7 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                     'Manage movie schedules and timings',
                     style: GoogleFonts.outfit(
                       fontSize: 16,
-                      color: Colors.grey[600],
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                   const SizedBox(height: 32),
@@ -115,7 +118,7 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: const Color(0xFFD4D8D1),
+        color: Theme.of(context).colorScheme.secondaryContainer,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Padding(
@@ -136,7 +139,12 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                         style: GoogleFonts.outfit(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
-                          color: const Color(0xFF6482AD),
+                          color:
+                              Theme.of(context).brightness == Brightness.light
+                              ? const Color(0xFF6482AD)
+                              : Theme.of(
+                                  context,
+                                ).colorScheme.primary.withValues(alpha: 0.8),
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -145,7 +153,7 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                         style: GoogleFonts.outfit(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: const Color(0xFF020617),
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                     ],
@@ -172,7 +180,7 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            const Divider(color: Colors.black12),
+            const Divider(color: Colors.white24),
             const SizedBox(height: 16),
             _buildDetailRow(
               'FORMAT/LANG',
@@ -185,7 +193,7 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                   .toUpperCase(),
             ),
             const SizedBox(height: 24),
-            const Divider(color: Colors.black12),
+            const Divider(color: Colors.white24),
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
@@ -193,8 +201,8 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
               child: ElevatedButton(
                 onPressed: () => _confirmDelete(st['id']),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFEF4444),
-                  foregroundColor: Colors.white,
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                  foregroundColor: Theme.of(context).colorScheme.onError,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -253,7 +261,7 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
         Text(
           label,
           style: GoogleFonts.outfit(
-            color: Colors.grey[600],
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 13,
             fontWeight: FontWeight.w600,
           ),
@@ -261,7 +269,7 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
         Text(
           value,
           style: GoogleFonts.outfit(
-            color: const Color(0xFF020617),
+            color: Theme.of(context).colorScheme.onSurface,
             fontSize: 13,
             fontWeight: FontWeight.bold,
           ),
@@ -281,7 +289,7 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
             'No showtimes scheduled',
             style: GoogleFonts.outfit(
               fontSize: 18,
-              color: Colors.grey[400],
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -347,7 +355,7 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
       barrierColor: Colors.black.withValues(alpha: 0.5),
       builder: (modalContext) => StatefulBuilder(
         builder: (dialogContext, setDialogState) => Dialog(
-          backgroundColor: Colors.white,
+          backgroundColor: Theme.of(context).colorScheme.surface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
           ),
@@ -365,7 +373,7 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                     style: GoogleFonts.outfit(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFF020617),
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 32),
@@ -376,16 +384,21 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                     style: GoogleFonts.outfit(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Colors.grey[700],
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       letterSpacing: 0.5,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.grey[50],
+                      color: Theme.of(context)
+                          .colorScheme
+                          .surfaceContainerHighest
+                          .withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[300]!),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.outlineVariant,
+                      ),
                     ),
                     child: DropdownButtonFormField<String>(
                       isExpanded: true,
@@ -402,12 +415,12 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                       ),
                       style: GoogleFonts.outfit(
                         fontSize: 16,
-                        color: const Color(0xFF020617),
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
-                      dropdownColor: Colors.white,
+                      dropdownColor: Theme.of(context).colorScheme.surface,
                       icon: Icon(
                         Icons.keyboard_arrow_down,
-                        color: Colors.grey[600],
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                       items: _movies.map((m) {
                         return DropdownMenuItem(
@@ -429,16 +442,21 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                     style: GoogleFonts.outfit(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Colors.grey[700],
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       letterSpacing: 0.5,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.grey[50],
+                      color: Theme.of(context)
+                          .colorScheme
+                          .surfaceContainerHighest
+                          .withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[300]!),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.outlineVariant,
+                      ),
                     ),
                     child: DropdownButtonFormField<String>(
                       isExpanded: true,
@@ -451,16 +469,20 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                         ),
                         border: InputBorder.none,
                         hintText: 'Select Theatre',
-                        hintStyle: GoogleFonts.outfit(color: Colors.grey[400]),
+                        hintStyle: GoogleFonts.outfit(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                        ),
                       ),
                       style: GoogleFonts.outfit(
                         fontSize: 16,
-                        color: const Color(0xFF020617),
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
-                      dropdownColor: Colors.white,
+                      dropdownColor: Theme.of(context).colorScheme.surface,
                       icon: Icon(
                         Icons.keyboard_arrow_down,
-                        color: Colors.grey[600],
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                       items: _theatres.map((t) {
                         return DropdownMenuItem(
@@ -483,7 +505,7 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                     style: GoogleFonts.outfit(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Colors.grey[700],
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       letterSpacing: 0.5,
                     ),
                   ),
@@ -494,20 +516,7 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                         context: dialogContext,
                         initialTime: TimeOfDay.now(),
                         builder: (context, child) {
-                          return Theme(
-                            data: Theme.of(context).copyWith(
-                              timePickerTheme: TimePickerThemeData(
-                                backgroundColor: Colors.white,
-                                hourMinuteShape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                dayPeriodShape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                            ),
-                            child: child!,
-                          );
+                          return child!;
                         },
                       );
                       if (picked != null) {
@@ -530,9 +539,14 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                         vertical: 16,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.grey[50],
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest
+                            .withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey[300]!),
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.outlineVariant,
+                        ),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -541,13 +555,15 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                             timeController.text,
                             style: GoogleFonts.outfit(
                               fontSize: 16,
-                              color: const Color(0xFF020617),
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                           Icon(
                             Icons.access_time,
                             size: 20,
-                            color: Colors.grey[600],
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
                           ),
                         ],
                       ),
@@ -561,7 +577,7 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                     style: GoogleFonts.outfit(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Colors.grey[700],
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       letterSpacing: 0.5,
                     ),
                   ),
@@ -586,9 +602,14 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                         vertical: 16,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.grey[50],
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest
+                            .withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey[300]!),
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.outlineVariant,
+                        ),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -597,13 +618,15 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                             '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}',
                             style: GoogleFonts.outfit(
                               fontSize: 16,
-                              color: const Color(0xFF020617),
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                           Icon(
                             Icons.calendar_today,
                             size: 20,
-                            color: Colors.grey[600],
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
                           ),
                         ],
                       ),
@@ -617,16 +640,21 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                     style: GoogleFonts.outfit(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Colors.grey[700],
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       letterSpacing: 0.5,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.grey[50],
+                      color: Theme.of(context)
+                          .colorScheme
+                          .surfaceContainerHighest
+                          .withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[300]!),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.outlineVariant,
+                      ),
                     ),
                     child: DropdownButtonFormField<String>(
                       isExpanded: true,
@@ -639,16 +667,20 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                         ),
                         border: InputBorder.none,
                         hintText: 'Select Language',
-                        hintStyle: GoogleFonts.outfit(color: Colors.grey[400]),
+                        hintStyle: GoogleFonts.outfit(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                        ),
                       ),
                       style: GoogleFonts.outfit(
                         fontSize: 16,
-                        color: const Color(0xFF020617),
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
-                      dropdownColor: Colors.white,
+                      dropdownColor: Theme.of(context).colorScheme.surface,
                       icon: Icon(
                         Icons.keyboard_arrow_down,
-                        color: Colors.grey[600],
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                       items: ['English', 'Tamil', 'Sinhala', 'Hindi'].map((l) {
                         return DropdownMenuItem(
@@ -668,16 +700,21 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                     style: GoogleFonts.outfit(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Colors.grey[700],
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       letterSpacing: 0.5,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.grey[50],
+                      color: Theme.of(context)
+                          .colorScheme
+                          .surfaceContainerHighest
+                          .withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[300]!),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.outlineVariant,
+                      ),
                     ),
                     child: DropdownButtonFormField<String>(
                       isExpanded: true,
@@ -690,16 +727,20 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                         ),
                         border: InputBorder.none,
                         hintText: 'Select Format',
-                        hintStyle: GoogleFonts.outfit(color: Colors.grey[400]),
+                        hintStyle: GoogleFonts.outfit(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                        ),
                       ),
                       style: GoogleFonts.outfit(
                         fontSize: 16,
-                        color: const Color(0xFF020617),
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
-                      dropdownColor: Colors.white,
+                      dropdownColor: Theme.of(context).colorScheme.surface,
                       icon: Icon(
                         Icons.keyboard_arrow_down,
-                        color: Colors.grey[600],
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                       items: ['2D', '3D', 'IMAX', '4DX'].map((f) {
                         return DropdownMenuItem(
@@ -717,16 +758,21 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                     style: GoogleFonts.outfit(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Colors.grey[700],
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       letterSpacing: 0.5,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.grey[50],
+                      color: Theme.of(context)
+                          .colorScheme
+                          .surfaceContainerHighest
+                          .withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[300]!),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.outlineVariant,
+                      ),
                     ),
                     child: TextField(
                       controller: priceController,
@@ -740,11 +786,15 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                         ),
                         border: InputBorder.none,
                         hintText: 'Enter Price',
-                        hintStyle: GoogleFonts.outfit(color: Colors.grey[400]),
+                        hintStyle: GoogleFonts.outfit(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                        ),
                       ),
                       style: GoogleFonts.outfit(
                         fontSize: 16,
-                        color: const Color(0xFF020617),
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ),
@@ -759,7 +809,9 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                           child: TextButton(
                             onPressed: () => Navigator.pop(dialogContext),
                             style: TextButton.styleFrom(
-                              foregroundColor: Colors.grey[600],
+                              foregroundColor: Theme.of(
+                                context,
+                              ).colorScheme.primary,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -767,7 +819,7 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                             child: Text(
                               'Cancel',
                               style: GoogleFonts.outfit(
-                                fontSize: 16,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -817,7 +869,7 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
-                                      backgroundColor: const Color(0xFF10B981),
+                                      backgroundColor: Colors.green,
                                       behavior: SnackBarBehavior.floating,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
@@ -828,15 +880,19 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                               }
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF023E5C),
-                              foregroundColor: Colors.white,
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.primary,
+                              foregroundColor: Theme.of(
+                                context,
+                              ).colorScheme.onPrimary,
                               elevation: 0,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
                             child: Text(
-                              'Add Showtime',
+                              'Add',
                               style: GoogleFonts.outfit(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../core/theme/app_colors.dart';
 import 'payment_screen.dart';
 import '../services/booking_service.dart';
 
@@ -67,12 +68,13 @@ class _BookingScreenState extends State<BookingScreen> {
   Widget build(BuildContext context) {
     double subtotal = _selectedSeats.length * _pricePerSeat;
     double total = subtotal + _bookingFee;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F4F6),
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         elevation: 0,
         title: Text(
           widget.movieTitle,
@@ -87,7 +89,7 @@ class _BookingScreenState extends State<BookingScreen> {
               margin: const EdgeInsets.all(16),
               padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
               decoration: BoxDecoration(
-                color: const Color(0xFF6D87AE),
+                color: Theme.of(context).colorScheme.primaryContainer,
                 borderRadius: BorderRadius.circular(24),
               ),
               child: Column(
@@ -101,7 +103,10 @@ class _BookingScreenState extends State<BookingScreen> {
                           height: 4,
                           width: 200,
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.3),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onPrimaryContainer
+                                .withValues(alpha: 0.3),
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
@@ -109,7 +114,10 @@ class _BookingScreenState extends State<BookingScreen> {
                         Text(
                           'SCREEN',
                           style: GoogleFonts.outfit(
-                            color: Colors.white.withValues(alpha: 0.5),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onPrimaryContainer
+                                .withValues(alpha: 0.5),
                             letterSpacing: 2,
                             fontSize: 10,
                           ),
@@ -142,10 +150,21 @@ class _BookingScreenState extends State<BookingScreen> {
                         child: Container(
                           decoration: BoxDecoration(
                             color: isBooked
-                                ? const Color(0xFF94A3B8)
+                                ? (isDark
+                                      ? AppColors.seatBookedDark
+                                      : AppColors.seatBooked)
                                 : isSelected
-                                ? const Color(0xFF020617)
-                                : Colors.white,
+                                ? (isDark
+                                      ? AppColors.seatSelectedDark
+                                      : AppColors.seatSelected)
+                                : (isDark
+                                      ? AppColors.seatAvailableDark
+                                      : AppColors.seatAvailable),
+                            border: Border.all(
+                              color: isDark
+                                  ? AppColors.seatBorderDark
+                                  : AppColors.seatBorder,
+                            ),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Center(
@@ -153,9 +172,13 @@ class _BookingScreenState extends State<BookingScreen> {
                               seatId,
                               style: TextStyle(
                                 fontSize: 10,
-                                color: isSelected || isBooked
-                                    ? Colors.white
-                                    : const Color(0xFF64748B),
+                                color: isBooked
+                                    ? (isDark ? Colors.white38 : Colors.black38)
+                                    : isSelected
+                                    ? (isDark ? Colors.black : Colors.white)
+                                    : (isDark
+                                          ? Colors.white70
+                                          : Colors.black87),
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -173,11 +196,31 @@ class _BookingScreenState extends State<BookingScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      _buildLegendItem('Available', Colors.white),
+                      _buildLegendItem(
+                        'Available',
+                        isDark
+                            ? AppColors.seatAvailableDark
+                            : AppColors.seatAvailable,
+                        isDark
+                            ? AppColors.seatBorderDark
+                            : AppColors.seatBorder,
+                      ),
                       const SizedBox(width: 16),
-                      _buildLegendItem('Selected', const Color(0xFF020617)),
+                      _buildLegendItem(
+                        'Selected',
+                        isDark
+                            ? AppColors.seatSelectedDark
+                            : AppColors.seatSelected,
+                        Colors.transparent,
+                      ),
                       const SizedBox(width: 16),
-                      _buildLegendItem('Booked', const Color(0xFF94A3B8)),
+                      _buildLegendItem(
+                        'Booked',
+                        isDark
+                            ? AppColors.seatBookedDark
+                            : AppColors.seatBooked,
+                        Colors.transparent,
+                      ),
                     ],
                   ),
                 ],
@@ -190,7 +233,9 @@ class _BookingScreenState extends State<BookingScreen> {
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF6D87AE),
+                  color: isDark
+                      ? AppColors.bookingSummaryBackgroundDark
+                      : AppColors.bookingSummaryBackground,
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: Column(
@@ -266,7 +311,9 @@ class _BookingScreenState extends State<BookingScreen> {
                           style: GoogleFonts.outfit(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onPrimaryContainer,
                           ),
                         ),
                       ],
@@ -294,7 +341,9 @@ class _BookingScreenState extends State<BookingScreen> {
                           );
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF006D7E),
+                          backgroundColor: isDark
+                              ? AppColors.paymentButtonDark
+                              : AppColors.paymentButton,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -385,7 +434,9 @@ class _BookingScreenState extends State<BookingScreen> {
           label,
           style: GoogleFonts.outfit(
             fontSize: 15,
-            color: Colors.white.withValues(alpha: 0.8),
+            color: Theme.of(
+              context,
+            ).colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
           ),
         ),
         Text(
@@ -393,14 +444,14 @@ class _BookingScreenState extends State<BookingScreen> {
           style: GoogleFonts.outfit(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onPrimaryContainer,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildLegendItem(String label, Color color) {
+  Widget _buildLegendItem(String label, Color color, [Color? borderColor]) {
     return Row(
       children: [
         Container(
@@ -409,6 +460,7 @@ class _BookingScreenState extends State<BookingScreen> {
           decoration: BoxDecoration(
             color: color,
             borderRadius: BorderRadius.circular(4),
+            border: borderColor != null ? Border.all(color: borderColor) : null,
           ),
         ),
         const SizedBox(width: 8),
@@ -416,7 +468,7 @@ class _BookingScreenState extends State<BookingScreen> {
           label,
           style: GoogleFonts.outfit(
             fontSize: 12,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onPrimaryContainer,
             fontWeight: FontWeight.w500,
           ),
         ),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../core/theme/app_colors.dart';
 import '../widgets/custom_button.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
@@ -16,7 +15,11 @@ class ProfileScreen extends StatelessWidget {
           'Profile',
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
         ),
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
+        elevation: 0,
       ),
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: FutureBuilder<List<String?>>(
         future: Future.wait([
           AuthService.getUserName(),
@@ -36,13 +39,13 @@ class ProfileScreen extends StatelessWidget {
                     const SizedBox(height: 40),
                     CircleAvatar(
                       radius: 50,
-                      backgroundColor: AppColors.primaryBlue.withValues(
-                        alpha: 0.1,
-                      ),
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.primary.withValues(alpha: 0.1),
                       child: Icon(
                         Icons.person_outline,
                         size: 50,
-                        color: AppColors.primaryBlue,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -51,7 +54,7 @@ class ProfileScreen extends StatelessWidget {
                       style: GoogleFonts.outfit(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.headerBackground,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     if (userEmail.isNotEmpty) ...[
@@ -59,7 +62,9 @@ class ProfileScreen extends StatelessWidget {
                       Text(
                         userEmail,
                         style: GoogleFonts.outfit(
-                          color: AppColors.textMuted.withValues(alpha: 0.8),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.6),
                           fontSize: 16,
                         ),
                       ),
@@ -73,8 +78,12 @@ class ProfileScreen extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: CustomButton(
                         text: 'Logout',
-                        color: const Color(0xFFEFF6FF), // Light blue info color
-                        textColor: AppColors.primaryBlue,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white.withValues(alpha: 0.1)
+                            : Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainerHighest,
+                        textColor: Theme.of(context).colorScheme.primary,
                         onPressed: () async {
                           await AuthService.logout();
                           if (context.mounted) {

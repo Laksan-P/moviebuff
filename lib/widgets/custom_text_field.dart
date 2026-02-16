@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../core/theme/app_colors.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class CustomTextField extends StatefulWidget {
@@ -43,7 +42,9 @@ class _CustomTextFieldState extends State<CustomTextField> {
           style: GoogleFonts.outfit(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: AppColors.text.withValues(alpha: 0.8),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.8),
           ),
         ),
         const SizedBox(height: 8),
@@ -54,9 +55,13 @@ class _CustomTextFieldState extends State<CustomTextField> {
           validator: widget.validator,
           decoration: InputDecoration(
             hintText: widget.hint,
-            hintStyle: GoogleFonts.outfit(color: Colors.grey[400]),
+            hintStyle: GoogleFonts.outfit(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.4),
+            ),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: Theme.of(context).colorScheme.surface,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 14,
@@ -65,7 +70,9 @@ class _CustomTextFieldState extends State<CustomTextField> {
                 ? IconButton(
                     icon: Icon(
                       _obscureText ? Icons.visibility_off : Icons.visibility,
-                      color: Colors.grey[400],
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.4),
                     ),
                     onPressed: () {
                       setState(() {
@@ -76,16 +83,20 @@ class _CustomTextFieldState extends State<CustomTextField> {
                 : null,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.grey[300]!),
+              borderSide: BorderSide(
+                color: Theme.of(context).colorScheme.outlineVariant,
+              ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.grey[300]!),
+              borderSide: BorderSide(
+                color: Theme.of(context).colorScheme.outlineVariant,
+              ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(
-                color: AppColors.cinemaGold,
+              borderSide: BorderSide(
+                color: Theme.of(context).colorScheme.primary,
                 width: 2,
               ),
             ),

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../services/booking_service.dart';
-import '../../core/theme/app_colors.dart';
 
 class AdminBookingsScreen extends StatefulWidget {
   const AdminBookingsScreen({super.key});
@@ -33,11 +32,11 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: const Text('Manage All Bookings'),
-        backgroundColor: const Color(0xFF020617),
-        foregroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -45,7 +44,10 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
           ? Center(
               child: Text(
                 'No bookings found',
-                style: GoogleFonts.outfit(fontSize: 16, color: Colors.grey),
+                style: GoogleFonts.outfit(
+                  fontSize: 16,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             )
           : ListView.separated(
@@ -67,7 +69,9 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
                 return Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFAFB8B9),
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Theme.of(context).colorScheme.secondaryContainer
+                        : Colors.white,
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
@@ -87,7 +91,7 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
                             shortId,
                             style: GoogleFonts.outfit(
                               fontWeight: FontWeight.bold,
-                              color: AppColors.primaryBlue,
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                           ),
                           Container(
@@ -135,7 +139,9 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
                             style: GoogleFonts.outfit(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
-                              color: Colors.grey,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
                             ),
                           ),
                           Text(
@@ -143,7 +149,7 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
                             style: GoogleFonts.outfit(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              color: const Color(0xFF020617),
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                         ],
@@ -166,7 +172,10 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
             width: 80,
             child: Text(
               '$label:',
-              style: GoogleFonts.outfit(fontSize: 13, color: Colors.grey[600]),
+              style: GoogleFonts.outfit(
+                fontSize: 13,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
           Expanded(
@@ -175,7 +184,7 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
               style: GoogleFonts.outfit(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
-                color: Colors.black87,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ),

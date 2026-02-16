@@ -54,12 +54,15 @@ class _AdminCancellationsScreenState extends State<AdminCancellationsScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF6D87AE)),
+          icon: Icon(
+            Icons.arrow_back,
+            color: Theme.of(context).colorScheme.primary,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: GestureDetector(
@@ -67,7 +70,7 @@ class _AdminCancellationsScreenState extends State<AdminCancellationsScreen>
           child: Text(
             'Back to Dashboard',
             style: GoogleFonts.outfit(
-              color: const Color(0xFF6D87AE),
+              color: Theme.of(context).colorScheme.primary,
               fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
@@ -87,7 +90,7 @@ class _AdminCancellationsScreenState extends State<AdminCancellationsScreen>
                     style: GoogleFonts.outfit(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFF020617),
+                      color: Theme.of(context).colorScheme.onSurface,
                       height: 1.1,
                     ),
                   ),
@@ -102,10 +105,10 @@ class _AdminCancellationsScreenState extends State<AdminCancellationsScreen>
                   const SizedBox(height: 32),
                   TabBar(
                     controller: _tabController,
-                    indicatorColor: const Color(0xFF6D87AE),
+                    indicatorColor: Theme.of(context).colorScheme.primary,
                     indicatorWeight: 3,
-                    labelColor: const Color(0xFF020617),
-                    unselectedLabelColor: Colors.grey,
+                    labelColor: Theme.of(context).colorScheme.onSurface,
+                    unselectedLabelColor: Theme.of(context).colorScheme.outline,
                     labelStyle: GoogleFonts.outfit(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -143,7 +146,7 @@ class _AdminCancellationsScreenState extends State<AdminCancellationsScreen>
         return Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: const Color(0xFFB0B8B9), // Matching mockup grey
+            color: Theme.of(context).colorScheme.secondaryContainer,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Column(
@@ -160,7 +163,7 @@ class _AdminCancellationsScreenState extends State<AdminCancellationsScreen>
                         style: GoogleFonts.outfit(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: const Color(0xFF020617),
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       Text(
@@ -169,7 +172,7 @@ class _AdminCancellationsScreenState extends State<AdminCancellationsScreen>
                             .toUpperCase(),
                         style: GoogleFonts.outfit(
                           fontSize: 12,
-                          color: Colors.black54,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -195,7 +198,7 @@ class _AdminCancellationsScreenState extends State<AdminCancellationsScreen>
                   ),
                 ],
               ),
-              const Divider(height: 32, color: Colors.black12),
+              const Divider(height: 32),
               _buildDataRow('MOVIE', booking['movie'] ?? 'Unknown'),
               _buildDataRow('REASON', booking['cancellationReason'] ?? 'Other'),
               _buildDataRow('DATE', booking['bookingDate'] ?? 'N/A'),
@@ -206,7 +209,9 @@ class _AdminCancellationsScreenState extends State<AdminCancellationsScreen>
                     child: ElevatedButton(
                       onPressed: () => _handleApproval(booking['id']),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF109360),
+                        backgroundColor: const Color(
+                          0xFF109360,
+                        ).withValues(alpha: 0.9),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -224,7 +229,9 @@ class _AdminCancellationsScreenState extends State<AdminCancellationsScreen>
                     child: ElevatedButton(
                       onPressed: () => _handleRejection(booking['id']),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF931010),
+                        backgroundColor: const Color(
+                          0xFF931010,
+                        ).withValues(alpha: 0.9),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -259,7 +266,7 @@ class _AdminCancellationsScreenState extends State<AdminCancellationsScreen>
         return Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: const Color(0xFFB0B8B9),
+            color: Theme.of(context).colorScheme.secondaryContainer,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Column(
@@ -276,7 +283,7 @@ class _AdminCancellationsScreenState extends State<AdminCancellationsScreen>
                         style: GoogleFonts.outfit(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: const Color(0xFF020617),
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       Text(
@@ -285,7 +292,7 @@ class _AdminCancellationsScreenState extends State<AdminCancellationsScreen>
                             .toUpperCase(),
                         style: GoogleFonts.outfit(
                           fontSize: 12,
-                          color: Colors.black54,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -372,7 +379,7 @@ class _AdminCancellationsScreenState extends State<AdminCancellationsScreen>
           Text(
             label,
             style: GoogleFonts.outfit(
-              color: Colors.black54,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontSize: 13,
               fontWeight: FontWeight.w500,
             ),
@@ -385,7 +392,7 @@ class _AdminCancellationsScreenState extends State<AdminCancellationsScreen>
                 style: GoogleFonts.outfit(
                   fontSize: 15,
                   fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-                  color: valueColor ?? const Color(0xFF020617),
+                  color: valueColor ?? Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               if (subText != null)
@@ -394,7 +401,7 @@ class _AdminCancellationsScreenState extends State<AdminCancellationsScreen>
                   style: GoogleFonts.outfit(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFF931010),
+                    color: const Color(0xFFEF4444),
                   ),
                 ),
             ],
@@ -410,7 +417,9 @@ class _AdminCancellationsScreenState extends State<AdminCancellationsScreen>
         width: double.infinity,
         height: 200,
         decoration: BoxDecoration(
-          color: const Color(0xFFB0B8B9),
+          color: Theme.of(
+            context,
+          ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Center(
@@ -419,7 +428,9 @@ class _AdminCancellationsScreenState extends State<AdminCancellationsScreen>
             style: GoogleFonts.outfit(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: const Color(0xFF020617).withValues(alpha: 0.5),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.5),
             ),
           ),
         ),

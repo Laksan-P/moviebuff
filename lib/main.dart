@@ -38,6 +38,8 @@ class MyApp extends StatelessWidget {
       title: 'MovieBuff',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.system,
       home: isLoggedIn
           ? (isAdmin ? const AdminDashboardScreen() : const HomeScreen())
           : const LoginScreen(),

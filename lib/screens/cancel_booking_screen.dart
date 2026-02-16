@@ -61,18 +61,21 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
     double cancellationFee = originalAmount * 0.5;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F4F6),
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF3F4F6),
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: Icon(
+            Icons.arrow_back,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Back to Bookings',
           style: GoogleFonts.outfit(
-            color: Colors.black,
+            color: Theme.of(context).colorScheme.onSurface,
             fontSize: 16,
             fontWeight: FontWeight.w500,
           ),
@@ -96,7 +99,7 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
                       style: GoogleFonts.outfit(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
-                        color: const Color(0xFF1F2937),
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -104,7 +107,9 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
                       'You can cancel your booking anytime with\n50% refund',
                       style: GoogleFonts.outfit(
                         fontSize: 16,
-                        color: Colors.grey[600],
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.6),
                         height: 1.5,
                       ),
                     ),
@@ -172,7 +177,7 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFF6D87AE),
+        color: Theme.of(context).colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
@@ -184,7 +189,7 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
             style: GoogleFonts.outfit(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onPrimaryContainer,
             ),
           ),
           const SizedBox(height: 16),
@@ -214,7 +219,10 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
               color: Colors.white.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16),
               border: Border(
-                left: BorderSide(color: Colors.redAccent.shade200, width: 4),
+                left: BorderSide(
+                  color: Theme.of(context).colorScheme.error,
+                  width: 4,
+                ),
               ),
             ),
             child: Column(
@@ -225,19 +233,27 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
                   style: GoogleFonts.outfit(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
                   ),
                 ),
                 const SizedBox(height: 16),
-                _buildPolicyPoint('Your booking will be cancelled permanently'),
+                _buildPolicyPoint(
+                  'Your booking will be cancelled permanently',
+                  context,
+                ),
                 _buildPolicyPoint(
                   'You will receive 50% of your ticket price as refund',
+                  context,
                 ),
-                _buildPolicyPoint('50% cancellation fee will be deducted'),
+                _buildPolicyPoint(
+                  '50% cancellation fee will be deducted',
+                  context,
+                ),
                 _buildPolicyPoint(
                   'Refund will be processed to your original payment method',
+                  context,
                 ),
-                _buildPolicyPoint('Refund is processed immediately'),
+                _buildPolicyPoint('Refund is processed immediately', context),
               ],
             ),
           ),
@@ -257,23 +273,29 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
           style: GoogleFonts.outfit(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: const Color(0xFF1F2937),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade300),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.outlineVariant,
+            ),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: _selectedReason,
               hint: Text(
                 'Select a Reason...',
-                style: GoogleFonts.outfit(color: Colors.grey[600]),
+                style: GoogleFonts.outfit(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
               ),
               isExpanded: true,
               icon: const Icon(Icons.keyboard_arrow_down),
@@ -300,7 +322,7 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
           style: GoogleFonts.outfit(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: const Color(0xFF1F2937),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 12),
@@ -309,9 +331,14 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
           maxLines: 4,
           decoration: InputDecoration(
             hintText: 'Tell us more about your cancellation (optional)',
-            hintStyle: GoogleFonts.outfit(color: Colors.grey[400]),
+            hintStyle: GoogleFonts.outfit(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.4),
+            ),
             filled: true,
-            fillColor: Colors.grey[100], // Slightly lighter gray than card
+            fillColor: Theme.of(context).colorScheme.surfaceContainerHighest
+                .withValues(alpha: 0.5), // Slightly lighter gray than card
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
@@ -331,7 +358,7 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
               height: 24,
               child: Checkbox(
                 value: _agreedToPolicy,
-                activeColor: const Color(0xFF023E5C),
+                activeColor: Theme.of(context).colorScheme.primary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(4),
                 ),
@@ -348,7 +375,9 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
                 'I understand and agree to the 50% refund policy. I acknowledge that 50% of my ticket price will be deducted as cancellation fee.',
                 style: GoogleFonts.outfit(
                   fontSize: 14,
-                  color: const Color(0xFF4B5563),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.7),
                   height: 1.4,
                 ),
               ),
@@ -369,7 +398,7 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
         Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: const Color(0xFF6D87AE),
+            color: Theme.of(context).colorScheme.primaryContainer,
             borderRadius: BorderRadius.circular(24),
           ),
           child: Column(
@@ -380,7 +409,7 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
                 style: GoogleFonts.outfit(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
                 ),
               ),
               const SizedBox(height: 24),
@@ -404,10 +433,14 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF023E5C).withValues(alpha: 0.3),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.1),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.2),
                   ),
                 ),
                 child: Column(
@@ -417,7 +450,9 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
                       style: GoogleFonts.outfit(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white.withValues(alpha: 0.7),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onPrimaryContainer.withValues(alpha: 0.7),
                         letterSpacing: 1,
                       ),
                     ),
@@ -427,7 +462,7 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
                       style: GoogleFonts.outfit(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
                       ),
                     ),
                   ],
@@ -440,7 +475,9 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.1),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.surface.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Column(
@@ -451,7 +488,7 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
                       style: GoogleFonts.outfit(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black,
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
                         letterSpacing: 1,
                       ),
                     ),
@@ -459,11 +496,13 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
                     _buildTimelineItem(
                       'Immediate',
                       'Cancellation processed',
+                      context,
                       isFirst: true,
                     ),
                     _buildTimelineItem(
                       'Immediate',
                       'Refund to payment method',
+                      context,
                       isLast: true,
                     ),
                   ],
@@ -476,14 +515,16 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.grey[300],
+            color: Theme.of(
+              context,
+            ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
             'Note: You can cancel this booking anytime. Refund will be processed to your original payment method.',
             style: GoogleFonts.outfit(
               fontSize: 12,
-              color: const Color(0xFF1F2937),
+              color: Theme.of(context).colorScheme.onSurface,
               height: 1.4,
             ),
           ),
@@ -502,8 +543,11 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
           child: OutlinedButton(
             onPressed: () => Navigator.pop(context),
             style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFF6D87AE),
-              side: const BorderSide(color: Color(0xFF6D87AE), width: 2),
+              foregroundColor: Theme.of(context).colorScheme.primary,
+              side: BorderSide(
+                color: Theme.of(context).colorScheme.primary,
+                width: 2,
+              ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -526,8 +570,10 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
                 ? _processCancellation
                 : null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF023E5C),
-              disabledBackgroundColor: Colors.grey[300],
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              disabledBackgroundColor: Theme.of(
+                context,
+              ).colorScheme.surfaceContainerHighest,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -538,7 +584,7 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
               style: GoogleFonts.outfit(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onPrimary,
               ),
             ),
           ),
@@ -551,10 +597,10 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -4),
           ),
@@ -569,12 +615,17 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
       children: [
         Text(
           '$label: ',
-          style: GoogleFonts.outfit(color: Colors.white70, fontSize: 15),
+          style: GoogleFonts.outfit(
+            color: Theme.of(
+              context,
+            ).colorScheme.onPrimaryContainer.withValues(alpha: 0.7),
+            fontSize: 15,
+          ),
         ),
         Text(
           value,
           style: GoogleFonts.outfit(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onPrimaryContainer,
             fontSize: 15,
             fontWeight: FontWeight.w600,
           ),
@@ -583,7 +634,7 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
     );
   }
 
-  Widget _buildPolicyPoint(String text) {
+  Widget _buildPolicyPoint(String text, BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -593,8 +644,8 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
             margin: const EdgeInsets.only(top: 6),
             width: 4,
             height: 4,
-            decoration: const BoxDecoration(
-              color: Colors.redAccent,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.error,
               shape: BoxShape.circle,
             ),
           ),
@@ -603,7 +654,9 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
             child: Text(
               text,
               style: GoogleFonts.outfit(
-                color: Colors.white.withValues(alpha: 0.9),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onPrimaryContainer.withValues(alpha: 0.9),
                 fontSize: 14,
                 height: 1.4,
               ),
@@ -620,12 +673,18 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
       children: [
         Text(
           label,
-          style: GoogleFonts.outfit(color: Colors.white70, fontSize: 15),
+          style: GoogleFonts.outfit(
+            color: Theme.of(
+              context,
+            ).colorScheme.onPrimaryContainer.withValues(alpha: 0.7),
+            fontSize: 15,
+          ),
         ),
         Text(
           value,
           style: GoogleFonts.outfit(
-            color: valueColor ?? Colors.white,
+            color:
+                valueColor ?? Theme.of(context).colorScheme.onPrimaryContainer,
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
@@ -636,7 +695,8 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
 
   Widget _buildTimelineItem(
     String time,
-    String title, {
+    String title,
+    BuildContext context, {
     bool isFirst = false,
     bool isLast = false,
   }) {
@@ -648,13 +708,17 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
             Icon(
               Icons.check,
               size: 16,
-              color: Colors.black.withValues(alpha: 0.7),
+              color: Theme.of(
+                context,
+              ).colorScheme.onPrimaryContainer.withValues(alpha: 0.7),
             ),
             if (!isLast)
               Container(
                 width: 1,
                 height: 24,
-                color: Colors.black.withValues(alpha: 0.2),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onPrimaryContainer.withValues(alpha: 0.2),
                 margin: const EdgeInsets.symmetric(vertical: 4),
               ),
           ],
@@ -668,13 +732,18 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
               style: GoogleFonts.outfit(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
-                color: Colors.black,
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
               ),
             ),
             const SizedBox(height: 2),
             Text(
               title,
-              style: GoogleFonts.outfit(fontSize: 13, color: Colors.black54),
+              style: GoogleFonts.outfit(
+                fontSize: 13,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onPrimaryContainer.withValues(alpha: 0.6),
+              ),
             ),
           ],
         ),

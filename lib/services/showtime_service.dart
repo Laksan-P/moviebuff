@@ -191,7 +191,7 @@ class ShowtimeService {
 
     // Dynamically identify all template-based showtime prefixes to refresh them
     final Set<String> templatePrefixes = _showtimeTemplates
-        .map((t) => (t['id_base'] as String).split('_')[0] + '_')
+        .map((t) => '${(t['id_base'] as String).split('_')[0]}_')
         .toSet();
 
     showtimes.removeWhere((s) {

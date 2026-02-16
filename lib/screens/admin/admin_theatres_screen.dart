@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../core/theme/app_colors.dart';
 import '../../services/theatre_service.dart';
 
 class AdminTheatresScreen extends StatefulWidget {
@@ -42,9 +41,7 @@ class _AdminTheatresScreenState extends State<AdminTheatresScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(
-          0xFFAFB8B9,
-        ), // Slate grey as per user screenshot
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 24,
@@ -60,7 +57,7 @@ class _AdminTheatresScreenState extends State<AdminTheatresScreen> {
                 style: GoogleFonts.outfit(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: const Color(0xFF020617),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 24),
@@ -106,8 +103,8 @@ class _AdminTheatresScreenState extends State<AdminTheatresScreen> {
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6D87AE),
-                    foregroundColor: Colors.white,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -125,8 +122,10 @@ class _AdminTheatresScreenState extends State<AdminTheatresScreen> {
                 child: OutlinedButton(
                   onPressed: () => Navigator.pop(context),
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFF6D87AE)),
-                    foregroundColor: const Color(0xFF020617),
+                    side: BorderSide(
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    foregroundColor: Theme.of(context).colorScheme.onSurface,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -153,7 +152,7 @@ class _AdminTheatresScreenState extends State<AdminTheatresScreen> {
         style: GoogleFonts.outfit(
           fontSize: 12,
           fontWeight: FontWeight.bold,
-          color: const Color(0xFF455A64),
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
       ),
     );
@@ -172,7 +171,7 @@ class _AdminTheatresScreenState extends State<AdminTheatresScreen> {
       decoration: InputDecoration(
         hintText: hint,
         filled: true,
-        fillColor: Colors.white,
+        fillColor: Theme.of(context).colorScheme.surface,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
@@ -191,13 +190,13 @@ class _AdminTheatresScreenState extends State<AdminTheatresScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Manage Theatres'),
-        backgroundColor: const Color(0xFF020617),
-        foregroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showTheatreDialog(),
-        backgroundColor: AppColors.cinemaRed,
-        child: const Icon(Icons.add, color: Colors.white),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        child: Icon(Icons.add, color: Theme.of(context).colorScheme.onPrimary),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -210,7 +209,7 @@ class _AdminTheatresScreenState extends State<AdminTheatresScreen> {
                 return Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
@@ -236,7 +235,9 @@ class _AdminTheatresScreenState extends State<AdminTheatresScreen> {
                             Text(
                               theatre['location'] as String,
                               style: GoogleFonts.outfit(
-                                color: Colors.grey,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
                                 fontSize: 14,
                               ),
                             ),

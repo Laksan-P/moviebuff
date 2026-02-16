@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../core/theme/app_colors.dart';
 import '../widgets/custom_button.dart';
 import 'theatres_screen.dart';
 import 'login_screen.dart';
@@ -51,10 +50,13 @@ class _HomeScreenState extends State<HomeScreen> {
       body: _buildBody(),
       bottomNavigationBar: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        decoration: const BoxDecoration(
-          color: Colors.white,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
           border: Border(
-            top: BorderSide(color: AppColors.borderGray, width: 0.5),
+            top: BorderSide(
+              color: Theme.of(context).colorScheme.outlineVariant,
+              width: 0.5,
+            ),
           ),
         ),
         child: Row(
@@ -133,7 +135,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Text(
                           'Login',
                           style: GoogleFonts.outfit(
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onSurface,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -148,8 +150,12 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: CustomButton(
                           text: 'Sign Up',
                           width: 90,
-                          color: const Color(0xFFE5E7EB),
-                          textColor: AppColors.headerBackground,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.secondaryContainer,
+                          textColor: Theme.of(
+                            context,
+                          ).colorScheme.onSecondaryContainer,
                           onPressed: () {
                             Navigator.of(context).push(
                               MaterialPageRoute(
@@ -182,7 +188,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             style: GoogleFonts.outfit(
                               fontSize: isWide ? 48 : 32, // Adaptive font size
                               fontWeight: FontWeight.w900,
-                              color: AppColors.black,
+                              color: Theme.of(context).colorScheme.onSurface,
                               height: 1.1,
                             ),
                           ),
@@ -191,7 +197,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             'Experience movies your way—book instantly, choose your seats, and enjoy the show exactly how you like it!',
                             style: GoogleFonts.outfit(
                               fontSize: isWide ? 18 : 15,
-                              color: AppColors.textMuted,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.6),
                               height: 1.5,
                             ),
                           ),
@@ -310,7 +318,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             Text(
                               'Join thousands of movie lovers today',
                               style: GoogleFonts.outfit(
-                                color: AppColors.textMuted,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withValues(alpha: 0.6),
                                 fontSize: isWide ? 16 : 14,
                               ),
                             ),
@@ -378,10 +388,15 @@ class _HomeScreenState extends State<HomeScreen> {
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) {
                               return Container(
-                                color: AppColors.cardGray,
-                                child: const Icon(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHighest,
+                                child: Icon(
                                   Icons.broken_image,
-                                  color: Colors.white24,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant
+                                      .withValues(alpha: 0.3),
                                   size: 48,
                                 ),
                               );
@@ -392,10 +407,15 @@ class _HomeScreenState extends State<HomeScreen> {
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) {
                               return Container(
-                                color: AppColors.cardGray,
-                                child: const Icon(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHighest,
+                                child: Icon(
                                   Icons.movie,
-                                  color: Colors.white24,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant
+                                      .withValues(alpha: 0.3),
                                   size: 48,
                                 ),
                               );
@@ -433,7 +453,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                       vertical: 6,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: AppColors.error,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.error,
                                       borderRadius: BorderRadius.circular(20),
                                     ),
                                     child: Text(
@@ -559,7 +581,7 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: isActive
-              ? AppColors.cardGray.withValues(alpha: 0.5)
+              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
         ),
@@ -568,8 +590,10 @@ class _HomeScreenState extends State<HomeScreen> {
             Icon(
               isActive ? activeIcon : icon,
               color: isActive
-                  ? AppColors.headerBackground
-                  : AppColors.textMuted,
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.6),
               size: 24,
             ),
             if (isActive) ...[
@@ -577,7 +601,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Text(
                 label,
                 style: GoogleFonts.outfit(
-                  color: AppColors.headerBackground,
+                  color: Theme.of(context).colorScheme.primary,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -593,8 +617,12 @@ class _HomeScreenState extends State<HomeScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.cardGray,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outlineVariant,
+          width: 0.5,
+        ),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -613,7 +641,9 @@ class _HomeScreenState extends State<HomeScreen> {
             textAlign: TextAlign.center,
             style: GoogleFonts.outfit(
               fontSize: 14,
-              color: AppColors.text.withValues(alpha: 0.7),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
         ],
