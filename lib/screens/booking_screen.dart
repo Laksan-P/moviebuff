@@ -54,7 +54,7 @@ class _BookingScreenState extends State<BookingScreen> {
   final double _bookingFee = 0.0;
 
   void _toggleSeat(String seat) {
-    if (_bookedSeats.contains(seat)) return;
+    if (_bookedSeats.contains(seat)) return; // If seat is booked, do nothing
     setState(() {
       if (_selectedSeats.contains(seat)) {
         _selectedSeats.remove(seat);

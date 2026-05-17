@@ -963,7 +963,7 @@ class CardNumberFormatter extends TextInputFormatter {
       if (nonSpaceLength % 4 == 0 &&
           nonSpaceLength != 16 &&
           i != text.length - 1) {
-        buffer.write(' ');
+        buffer.write(' '); // Add space after every 4 digits
       }
     }
 
