@@ -9,6 +9,8 @@ class ThemeToggleButton extends StatelessWidget {
 
   final bool compact;
 
+  static const double _size = 40;
+
   static IconData iconFor(ThemeMode mode) {
     switch (mode) {
       case ThemeMode.system:
@@ -33,67 +35,81 @@ class ThemeToggleButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeProv = context.watch<ThemeProvider>();
-    final scheme = Theme.of(context).colorScheme;
-    final isDark = scheme.brightness == Brightness.dark;
-    final mode = themeProv.mode;
-    final icon = iconFor(mode);
+    return Selector<ThemeProvider, ThemeMode>(
+      selector: (_, p) => p.mode,
+      builder: (context, mode, _) {
+        final scheme = Theme.of(context).colorScheme;
+        final isDark = scheme.brightness == Brightness.dark;
+        final icon = iconFor(mode);
+        final iconSize = compact ? 20.0 : 22.0;
 
-    final button = Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => themeProv.cycleMode(),
-        customBorder: const CircleBorder(),
-        child: Ink(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.1)
-                : scheme.surface.withValues(alpha: 0.95),
-            border: Border.all(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.22)
-                  : scheme.outline.withValues(alpha: 0.35),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.08),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+        final button = SizedBox(
+          width: _size,
+          height: _size,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => context.read<ThemeProvider>().cycleMode(),
+              customBorder: const CircleBorder(),
+              child: Ink(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : scheme.surface.withValues(alpha: 0.95),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.22)
+                        : scheme.outline.withValues(alpha: 0.35),
+                  ),
+                ),
+                child: Center(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    transitionBuilder: (child, animation) {
+                      final curved = CurvedAnimation(
+                        parent: animation,
+                        curve: Curves.easeOutCubic,
+                      );
+                      return FadeTransition(
+                        opacity: curved,
+                        child: ScaleTransition(
+                          scale: Tween<double>(begin: 0.82, end: 1).animate(
+                            curved,
+                          ),
+                          child: RotationTransition(
+                            turns: Tween<double>(begin: 0.08, end: 0).animate(
+                              curved,
+                            ),
+                            child: child,
+                          ),
+                        ),
+                      );
+                    },
+                    child: Icon(
+                      icon,
+                      key: ValueKey<ThemeMode>(mode),
+                      size: iconSize,
+                      color: scheme.primary,
+                    ),
+                  ),
+                ),
               ),
-            ],
-          ),
-          child: Padding(
-            padding: EdgeInsets.all(compact ? 8 : 10),
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 220),
-              switchInCurve: Curves.easeOutCubic,
-              switchOutCurve: Curves.easeInCubic,
-              transitionBuilder: (child, animation) {
-                return ScaleTransition(
-                  scale: Tween<double>(begin: 0.85, end: 1).animate(animation),
-                  child: FadeTransition(opacity: animation, child: child),
-                );
-              },
-              child: Icon(
-                icon,
-                key: ValueKey<ThemeMode>(mode),
-                size: compact ? 22 : 24,
-                color: scheme.primary,
-              ),
             ),
           ),
-        ),
-      ),
-    );
+        );
 
-    return Tooltip(
-      message: '${labelFor(mode)} · tap to change',
-      child: Semantics(
-        button: true,
-        label: labelFor(mode),
-        child: button,
-      ),
+        return Tooltip(
+          message: '${labelFor(mode)} · tap to change',
+          child: Semantics(
+            button: true,
+            label: labelFor(mode),
+            child: button,
+          ),
+        );
+      },
     );
   }
 }

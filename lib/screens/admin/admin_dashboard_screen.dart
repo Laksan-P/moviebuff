@@ -138,13 +138,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    context.watch<MovieProvider>();
-
     final now = DateTime.now();
     final dateStr =
         '${_getMonth(now.month)} ${now.day}, ${now.year} ${_formatTime(now)}';
     final scheme = Theme.of(context).colorScheme;
-    final conn = context.watch<ConnectivityProvider>();
+    final online = context.select<ConnectivityProvider, bool>((c) => c.isOnline);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -230,9 +228,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   children: [
                     _adminChip(
                       context,
-                      conn.isOnline ? Icons.cloud_done_outlined : Icons.cloud_off,
-                      conn.isOnline ? 'Network OK' : 'Offline mode',
-                      conn.isOnline ? scheme.primary : scheme.error,
+                      online ? Icons.cloud_done_outlined : Icons.cloud_off,
+                      online ? 'Network OK' : 'Offline mode',
+                      online ? scheme.primary : scheme.error,
                     ),
                     _adminChip(
                       context,

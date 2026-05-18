@@ -17,6 +17,8 @@ import '../providers/movie_provider.dart';
 import '../utils/movie_catalog_utils.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/cinematic_background.dart';
+import '../widgets/keep_alive_tab.dart';
+import '../utils/poster_decode.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -26,26 +28,52 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _currentSliderIndex = 0;
   int _bottomNavIndex = 0;
-  int _tabTransitionToken = 0;
-  String? _userName;
-  final CarouselSliderController _carouselController =
-      CarouselSliderController();
+  late final PageController _pageController;
+  late final List<Widget> _tabPages;
 
   @override
   void initState() {
     super.initState();
-    _loadInitialData();
+    _pageController = PageController(initialPage: 0);
+    _tabPages = [
+      _HomeTabPage(
+        key: const ValueKey<String>('nav_home'),
+        onNavigateToTheatres: () => _goToTab(1),
+      ),
+      const KeepAliveTab(
+        key: ValueKey<String>('nav_theatres'),
+        child: TheatresScreen(),
+      ),
+      const KeepAliveTab(
+        key: ValueKey<String>('nav_bookings'),
+        child: MyBookingsScreen(),
+      ),
+      const KeepAliveTab(
+        key: ValueKey<String>('nav_device'),
+        child: DeviceScreen(),
+      ),
+      const KeepAliveTab(
+        key: ValueKey<String>('nav_profile'),
+        child: ProfileScreen(),
+      ),
+    ];
   }
 
-  Future<void> _loadInitialData() async {
-    final name = await AuthService.getUserName();
-    if (mounted) {
-      setState(() {
-        _userName = name;
-      });
-    }
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _goToTab(int index) {
+    if (_bottomNavIndex == index) return;
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOutCubic,
+    );
+    setState(() => _bottomNavIndex = index);
   }
 
   @override
@@ -63,20 +91,16 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 const ConnectivityBanner(),
                 Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 220),
-                    switchInCurve: Curves.easeOutCubic,
-                    switchOutCurve: Curves.easeIn,
-                    transitionBuilder: (child, animation) {
-                      return FadeTransition(
-                        opacity: animation,
-                        child: child,
-                      );
+                  child: PageView(
+                    controller: _pageController,
+                    physics: const NeverScrollableScrollPhysics(),
+                    allowImplicitScrolling: true,
+                    onPageChanged: (index) {
+                      if (_bottomNavIndex != index) {
+                        setState(() => _bottomNavIndex = index);
+                      }
                     },
-                    child: KeyedSubtree(
-                      key: ValueKey<int>(_tabTransitionToken),
-                      child: _buildNavStack(),
-                    ),
+                    children: _tabPages,
                   ),
                 ),
               ],
@@ -157,59 +181,172 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _selectNavTab(int index) {
-    if (_bottomNavIndex == index) return;
-    setState(() {
-      _bottomNavIndex = index;
-      _tabTransitionToken++;
-    });
-  }
-
-  Widget _buildNavStack() {
-    return IndexedStack(
-      index: _bottomNavIndex,
-      sizing: StackFit.expand,
-      children: [
-        KeyedSubtree(
-          key: const ValueKey<String>('nav_home'),
-          child: _buildHomeContent(),
+  Widget _buildNavItem(
+    int index,
+    IconData icon,
+    IconData activeIcon,
+    String label, {
+    bool compact = false,
+  }) {
+    final isActive = _bottomNavIndex == index;
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _goToTab(index),
+        borderRadius: BorderRadius.circular(18),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 5 : 14,
+            vertical: 8,
+          ),
+          decoration: BoxDecoration(
+            color: isActive
+                ? scheme.primary.withValues(alpha: 0.14)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: isActive
+                  ? scheme.primary.withValues(alpha: 0.35)
+                  : Colors.transparent,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isActive ? activeIcon : icon,
+                color: isActive
+                    ? scheme.primary
+                    : scheme.onSurface.withValues(alpha: 0.52),
+                size: 23,
+              ),
+              if (isActive) ...[
+                const SizedBox(width: 7),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.outfit(
+                    color: scheme.primary,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12.5,
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
-        const KeyedSubtree(
-          key: ValueKey<String>('nav_theatres'),
-          child: TheatresScreen(),
-        ),
-        const KeyedSubtree(
-          key: ValueKey<String>('nav_bookings'),
-          child: MyBookingsScreen(),
-        ),
-        const KeyedSubtree(
-          key: ValueKey<String>('nav_device'),
-          child: DeviceScreen(),
-        ),
-        const KeyedSubtree(
-          key: ValueKey<String>('nav_profile'),
-          child: ProfileScreen(),
-        ),
-      ],
+      ),
     );
   }
+}
 
-  Widget _buildHomeContent() {
-    final movieProv = context.watch<MovieProvider>();
-    final waiting = movieProv.awaitingCatalogueUi;
-    final mergedMovies = movieProv.movies;
-    final sliderSource =
-        waiting ? <Map<String, dynamic>>[] : mergedMovies.take(3).toList();
+class _HomeCatalogueSlice {
+  const _HomeCatalogueSlice({
+    required this.awaiting,
+    required this.movies,
+    required this.source,
+    required this.sourceLabel,
+    required this.favoritesKey,
+  });
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        bool isWide = constraints.maxWidth > 900;
-        double contentWidth = isWide ? 1200 : double.infinity;
-        final narrow = constraints.maxWidth < 400;
-        final hPad = narrow ? 16.0 : 24.0;
+  final bool awaiting;
+  final List<Map<String, dynamic>> movies;
+  final MovieSource source;
+  final String sourceLabel;
+  final int favoritesKey;
 
-        return SingleChildScrollView(
-          child: Column(
+  @override
+  bool operator ==(Object other) {
+    return other is _HomeCatalogueSlice &&
+        awaiting == other.awaiting &&
+        source == other.source &&
+        sourceLabel == other.sourceLabel &&
+        favoritesKey == other.favoritesKey &&
+        identical(movies, other.movies);
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        awaiting,
+        movies,
+        source,
+        sourceLabel,
+        favoritesKey,
+      );
+}
+
+class _HomeTabPage extends StatefulWidget {
+  const _HomeTabPage({
+    super.key,
+    required this.onNavigateToTheatres,
+  });
+
+  final VoidCallback onNavigateToTheatres;
+
+  @override
+  State<_HomeTabPage> createState() => _HomeTabPageState();
+}
+
+class _HomeTabPageState extends State<_HomeTabPage>
+    with AutomaticKeepAliveClientMixin {
+  int _currentSliderIndex = 0;
+  String? _userName;
+  final CarouselSliderController _carouselController =
+      CarouselSliderController();
+
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserName();
+  }
+
+  Future<void> _loadUserName() async {
+    final name = await AuthService.getUserName();
+    if (mounted) {
+      setState(() => _userName = name);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return Selector<MovieProvider, _HomeCatalogueSlice>(
+      selector: (_, p) => _HomeCatalogueSlice(
+        awaiting: p.awaitingCatalogueUi,
+        movies: p.movies,
+        source: p.source,
+        sourceLabel: p.sourceLabel,
+        favoritesKey: Object.hashAll(
+          p.favorites.map((f) => f['title']?.toString() ?? ''),
+        ),
+      ),
+      builder: (context, slice, _) {
+        final movieProv = context.read<MovieProvider>();
+        final waiting = slice.awaiting;
+        final mergedMovies = slice.movies;
+        final sliderSource = waiting
+            ? <Map<String, dynamic>>[]
+            : mergedMovies.take(3).toList();
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth > 900;
+            final contentWidth = isWide ? 1200.0 : double.infinity;
+            final narrow = constraints.maxWidth < 400;
+            final hPad = narrow ? 16.0 : 24.0;
+
+            return SingleChildScrollView(
+              physics: const ClampingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics(),
+              ),
+              child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // Navbar container for wide screens
@@ -325,9 +462,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             text: 'Book Tickets Now →',
                             width: double.infinity, // Full width button
                             height: 56,
-                            onPressed: () {
-                              setState(() => _bottomNavIndex = 1);
-                            },
+                            onPressed: widget.onNavigateToTheatres,
                           ),
                           const SizedBox(height: 40),
                           _buildCarousel(
@@ -341,7 +476,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 40),
 
                       // ───── External JSON master list (MAD II) ─────
-                      _buildExternalMoviesSection(movieProv, isWide, narrow),
+                      _buildExternalMoviesSection(
+                        movieProv,
+                        slice,
+                        isWide,
+                        narrow,
+                      ),
 
                       const SizedBox(height: 40),
 
@@ -453,9 +593,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             CustomButton(
                               text: 'Start Booking Now →',
                               width: 220,
-                              onPressed: () {
-                                setState(() => _bottomNavIndex = 1);
-                              },
+                              onPressed: widget.onNavigateToTheatres,
                             ),
                           ],
                         ),
@@ -466,7 +604,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ],
-          ),
+              ),
+            );
+          },
         );
       },
     );
@@ -698,82 +838,29 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _carouselPoster(BuildContext context, Map<String, dynamic> movie) {
-    return _HomeCatalogPoster(movie: movie, boxFit: BoxFit.cover);
+    return _HomeCatalogPoster(
+      movie: movie,
+      boxFit: BoxFit.cover,
+      decodeWidth: 420,
+    );
   }
 
   Widget _cataloguePosterTile(BuildContext context, Map<String, dynamic> m) {
-    return _HomeCatalogPoster(movie: m, boxFit: BoxFit.cover);
-  }
-
-  Widget _buildNavItem(
-    int index,
-    IconData icon,
-    IconData activeIcon,
-    String label, {
-    bool compact = false,
-  }) {
-    final isActive = _bottomNavIndex == index;
-    final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => _selectNavTab(index),
-        borderRadius: BorderRadius.circular(18),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-          padding: EdgeInsets.symmetric(
-            horizontal: compact ? 5 : 14,
-            vertical: 8,
-          ),
-          decoration: BoxDecoration(
-            color: isActive
-                ? scheme.primary.withValues(alpha: 0.14)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: isActive
-                  ? scheme.primary.withValues(alpha: 0.35)
-                  : Colors.transparent,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                isActive ? activeIcon : icon,
-                color: isActive
-                    ? scheme.primary
-                    : scheme.onSurface.withValues(alpha: 0.52),
-                size: 23,
-              ),
-              if (isActive) ...[
-                const SizedBox(width: 7),
-                Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.outfit(
-                    color: scheme.primary,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 12.5,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
+    return _HomeCatalogPoster(
+      movie: m,
+      boxFit: BoxFit.cover,
+      decodeWidth: 150,
     );
   }
 
   // Scrollable master list driven by the external JSON (MAD II requirement).
   Widget _buildExternalMoviesSection(
     MovieProvider prov,
+    _HomeCatalogueSlice slice,
     bool isWide,
     bool narrow,
   ) {
-    if (prov.awaitingCatalogueUi) {
+    if (slice.awaiting) {
       final headerColor = Theme.of(context).colorScheme.onSurface;
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -800,13 +887,13 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    final movies = prov.movies;
+    final movies = slice.movies;
     final headerColor = Theme.of(context).colorScheme.onSurface;
     final mutedColor = headerColor.withValues(alpha: 0.6);
 
     String badgeLabel;
     Color badgeColor;
-    switch (prov.source) {
+    switch (slice.source) {
       case MovieSource.network:
         badgeLabel = 'LIVE · external JSON';
         badgeColor = const Color(0xFF10B981);
@@ -894,7 +981,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(height: 4),
         Text(
-          prov.sourceLabel,
+          slice.sourceLabel,
           style: GoogleFonts.outfit(fontSize: 12, color: mutedColor),
         ),
         const SizedBox(height: 16),
@@ -916,12 +1003,15 @@ class _HomeScreenState extends State<HomeScreen> {
             height: 240,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
+              physics: const ClampingScrollPhysics(),
+              cacheExtent: 240,
               itemCount: movies.length,
               separatorBuilder: (_, __) => const SizedBox(width: 12),
               itemBuilder: (context, i) {
                 final m = movies[i];
                 final isFav = prov.isFavorite(m['title']?.toString() ?? '');
-                return GestureDetector(
+                return RepaintBoundary(
+                  child: GestureDetector(
                   onTap: () {
                     final normalized = MovieCatalogUtils.normalizeCustomerMovie(
                       Map<String, dynamic>.from(m),
@@ -1018,6 +1108,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                   ),
+                ),
                 );
               },
             ),
@@ -1035,13 +1126,6 @@ class _HomeScreenState extends State<HomeScreen> {
         color: scheme.surface.withValues(alpha: 0.88),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: scheme.outline.withValues(alpha: 0.14)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -1076,10 +1160,12 @@ class _HomeCatalogPoster extends StatefulWidget {
   const _HomeCatalogPoster({
     required this.movie,
     required this.boxFit,
+    this.decodeWidth = 200,
   });
 
   final Map<String, dynamic> movie;
   final BoxFit boxFit;
+  final double decodeWidth;
 
   @override
   State<_HomeCatalogPoster> createState() => _HomeCatalogPosterState();
@@ -1110,6 +1196,7 @@ class _HomeCatalogPosterState extends State<_HomeCatalogPoster> {
 
   @override
   Widget build(BuildContext context) {
+    final cacheW = posterDecodePixels(context, widget.decodeWidth);
     if (_index < _urls.length) {
       final url = _urls[_index];
       return Image.network(
@@ -1118,6 +1205,12 @@ class _HomeCatalogPosterState extends State<_HomeCatalogPoster> {
         fit: widget.boxFit,
         width: double.infinity,
         height: double.infinity,
+        cacheWidth: cacheW,
+        gaplessPlayback: true,
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return _placeholder(context);
+        },
         errorBuilder: (context, error, stackTrace) {
           MovieCatalogUtils.logPosterLoadFailed(_title, error);
           final next = _index + 1;
