@@ -129,13 +129,24 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     );
   }
 
+  /// Clears the floating home bottom nav ([HomeScreen.extendBody]).
+  EdgeInsets _listPadding(BuildContext context) {
+    final bottomSafe = MediaQuery.paddingOf(context).bottom;
+    const navClearance = 110.0;
+    return EdgeInsets.fromLTRB(24, 16, 24, 24 + navClearance + bottomSafe);
+  }
+
   Widget _buildBookingList(
     List<Map<String, dynamic>> bookings,
     bool isCancelledList,
   ) {
     if (bookings.isEmpty) {
-      return Center(
-        child: Column(
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: _listPadding(context),
+        child: SizedBox(
+          height: MediaQuery.sizeOf(context).height * 0.45,
+          child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
@@ -164,11 +175,13 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             ),
           ],
         ),
+        ),
       );
     }
 
     return ListView.separated(
-      padding: const EdgeInsets.all(24),
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: _listPadding(context),
       itemCount: bookings.length,
       separatorBuilder: (_, __) => const SizedBox(height: 20),
       itemBuilder: (context, index) {
