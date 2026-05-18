@@ -21,12 +21,12 @@ class AppLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final isLight = scheme.brightness == Brightness.light;
     final height = fontSize * 1.45;
     final widthCap = maxWidth ?? height * 3.2;
     final fallbackColor =
-        color ?? (scheme.brightness == Brightness.light
-            ? AppColors.text
-            : Colors.white);
+        color ?? (isLight ? AppColors.text : Colors.white);
+    final lightTint = color ?? AppColors.primaryBlueDeep;
 
     final mark = Image.asset(
       _assetPath,
@@ -34,6 +34,8 @@ class AppLogo extends StatelessWidget {
       fit: BoxFit.contain,
       filterQuality: FilterQuality.medium,
       semanticLabel: 'MovieBuff',
+      color: isLight ? lightTint : null,
+      colorBlendMode: isLight ? BlendMode.srcIn : null,
       errorBuilder: (context, error, stackTrace) {
         return Text(
           'MovieBuff',
