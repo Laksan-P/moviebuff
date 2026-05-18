@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../core/validation/form_validators.dart';
 import '../providers/auth_provider.dart';
 import '../providers/movie_provider.dart';
+import '../services/auth_service.dart';
 import '../services/device_service.dart';
 import '../widgets/theme_toggle_button.dart';
 import '../services/local_db_service.dart';
@@ -18,33 +19,69 @@ import '../widgets/cinematic_background.dart';
 import 'login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  const ProfileScreen({super.key, this.visibilityToken = 0});
+
+  /// Bumped by [HomeScreen] when the Profile tab becomes active.
+  final int visibilityToken;
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends State<ProfileScreen>
+    with WidgetsBindingObserver {
   String? _photoPath;
   ProfileDetails _details = const ProfileDetails();
   int _bookingCount = 0;
   AuthProvider? _authForListener;
+  MovieProvider? _movieProvForListener;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _attachAuthListener());
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _attachListeners());
   }
 
-  void _attachAuthListener() {
+  @override
+  void didUpdateWidget(ProfileScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.visibilityToken != oldWidget.visibilityToken) {
+      _scheduleProfileReload();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _scheduleProfileReload();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _scheduleProfileReload();
+    }
+  }
+
+  void _attachListeners() {
     if (!mounted) return;
     final auth = context.read<AuthProvider>();
     _authForListener ??= auth..addListener(_onAuthSessionChanged);
+
+    final movieProv = context.read<MovieProvider>();
+    _movieProvForListener ??= movieProv..addListener(_onMovieProvChanged);
+
     _scheduleProfileReload();
   }
 
   void _onAuthSessionChanged() {
     _scheduleProfileReload();
+  }
+
+  void _onMovieProvChanged() {
+    if (!mounted) return;
+    setState(() {});
   }
 
   void _scheduleProfileReload() {
@@ -56,28 +93,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _authForListener?.removeListener(_onAuthSessionChanged);
+    _movieProvForListener?.removeListener(_onMovieProvChanged);
     super.dispose();
   }
 
+  String _localBookingsLabel(int count) => '$count saved on device';
+
   Future<void> _reloadProfile() async {
     final auth = context.read<AuthProvider>();
-    final logEmail = (auth.email?.trim().isEmpty ?? true)
-        ? '(no email)'
-        : auth.email!.trim();
+    final movieProv = context.read<MovieProvider>();
+    final mail = (await AuthService.getUserEmail())?.trim() ?? '';
+    final logEmail = mail.isEmpty ? '(no email)' : mail;
     debugPrint('👤 PROFILE - Loading data for $logEmail');
 
     final details = await ProfileDetailsService.load(auth.email);
     final path = await ProfilePhotoService.getValidPath(auth.email);
+
     var bookings = 0;
-    final mail = auth.email?.trim() ?? '';
     if (mail.isNotEmpty) {
       try {
-        bookings = await LocalDbService.countBookingsForUser(mail);
+        debugPrint('👤 PROFILE BOOKING COUNT SOURCE: sqflite/local storage');
+        final rows = await LocalDbService.getBookingsByUser(mail);
+        bookings = rows.length;
       } catch (_) {
         bookings = 0;
       }
     }
+
+    final favCount = movieProv.favorites.length;
+    debugPrint(
+      '👤 PROFILE ACTIVITY REFRESHED: bookings=$bookings favourites=$favCount',
+    );
+
     if (mounted) {
       setState(() {
         _details = details;
@@ -676,7 +725,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           _activityLine(
                             Icons.confirmation_number_outlined,
                             'Local bookings',
-                            '$_bookingCount saved on device',
+                            _localBookingsLabel(_bookingCount),
                           ),
                           _activityLine(
                             Icons.theaters_outlined,

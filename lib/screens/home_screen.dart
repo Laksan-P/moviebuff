@@ -28,15 +28,18 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  static const int _profileTabIndex = 4;
+
   int _bottomNavIndex = 0;
+  int _profileVisibilityToken = 0;
   late final PageController _pageController;
-  late final List<Widget> _tabPages;
+  late final List<Widget> _tabPagesBeforeProfile;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: 0);
-    _tabPages = [
+    _tabPagesBeforeProfile = [
       _HomeTabPage(
         key: const ValueKey<String>('nav_home'),
         onNavigateToTheatres: () => _goToTab(1),
@@ -53,11 +56,22 @@ class _HomeScreenState extends State<HomeScreen> {
         key: ValueKey<String>('nav_device'),
         child: DeviceScreen(),
       ),
-      const KeepAliveTab(
-        key: ValueKey<String>('nav_profile'),
-        child: ProfileScreen(),
-      ),
     ];
+  }
+
+  List<Widget> get _tabPages => [
+        ..._tabPagesBeforeProfile,
+        KeepAliveTab(
+          key: const ValueKey<String>('nav_profile'),
+          child: ProfileScreen(
+            key: const ValueKey<String>('profile_screen'),
+            visibilityToken: _profileVisibilityToken,
+          ),
+        ),
+      ];
+
+  void _notifyProfileTabVisible() {
+    _profileVisibilityToken++;
   }
 
   @override
@@ -67,13 +81,21 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _goToTab(int index) {
-    if (_bottomNavIndex == index) return;
+    if (_bottomNavIndex == index) {
+      if (index == _profileTabIndex) {
+        setState(_notifyProfileTabVisible);
+      }
+      return;
+    }
     _pageController.animateToPage(
       index,
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeOutCubic,
     );
-    setState(() => _bottomNavIndex = index);
+    setState(() {
+      _bottomNavIndex = index;
+      if (index == _profileTabIndex) _notifyProfileTabVisible();
+    });
   }
 
   @override
@@ -97,7 +119,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     allowImplicitScrolling: true,
                     onPageChanged: (index) {
                       if (_bottomNavIndex != index) {
-                        setState(() => _bottomNavIndex = index);
+                        setState(() {
+                          _bottomNavIndex = index;
+                          if (index == _profileTabIndex) {
+                            _notifyProfileTabVisible();
+                          }
+                        });
                       }
                     },
                     children: _tabPages,
