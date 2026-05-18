@@ -42,7 +42,11 @@ class MovieService {
         movies.add(initialMovie);
         updated = true;
       } else {
-        // Existing movie - check if important fields changed in code
+        // Never overwrite posters synced from live external JSON or admin edits.
+        if (movies[index]['_externalSynced'] == true ||
+            movies[index]['_adminLocal'] == true) {
+          continue;
+        }
         bool changed = false;
         if (movies[index]['image'] != initialMovie['image']) {
           movies[index]['image'] = initialMovie['image'];
@@ -67,6 +71,12 @@ class MovieService {
         '🎬 MOVIE SERVICE - Synced with ${existing == null ? "initial" : "updated"} default movies',
       );
     }
+  }
+
+  /// Persists the full movie list (used after external JSON sync).
+  static Future<void> saveMovies(List<Map<String, dynamic>> movies) async {
+    await _setString(_moviesKey, jsonEncode(movies));
+    debugPrint('🎬 MOVIE SERVICE - Saved ${movies.length} movies to prefs');
   }
 
   // Get all movies

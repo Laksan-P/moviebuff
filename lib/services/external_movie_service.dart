@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 
 import '../core/config/app_config.dart';
 import 'local_db_service.dart';
+import 'movie_catalog_sync_service.dart';
 
 enum MovieSource { network, cache, asset }
 
@@ -52,8 +53,15 @@ class ExternalMovieService {
     }
 
     try {
-      final uri = Uri.parse(AppConfig.externalMoviesUrl);
-      final resp = await http.get(uri).timeout(AppConfig.httpTimeout);
+      var url = AppConfig.externalMoviesUrl.trim();
+      if (forceRefresh) {
+        final sep = url.contains('?') ? '&' : '?';
+        url = '$url${sep}_=${DateTime.now().millisecondsSinceEpoch}';
+      }
+      final uri = Uri.parse(url);
+      final resp = await http
+          .get(uri, headers: const {'Cache-Control': 'no-cache'})
+          .timeout(AppConfig.httpTimeout);
 
       if (resp.statusCode == 200) {
         final decoded = jsonDecode(resp.body);
@@ -61,10 +69,10 @@ class ExternalMovieService {
           final list = decoded
               .map((e) => Map<String, dynamic>.from(e as Map))
               .toList();
-          debugPrint(
-            '✅ EXTERNAL - Loaded ${list.length} movies from live JSON',
-          );
+          debugPrint('LIVE JSON FETCH SUCCESS: ${list.length} movies');
           await LocalDbService.writeMovieCache(_cacheKey, list);
+          await MovieCatalogSyncService.applyLiveExternalMovies(list);
+          await MovieCatalogSyncService.clearImageCacheAfterRefresh(list);
           return ExternalMoviesResult(
             movies: list,
             source: MovieSource.network,
@@ -88,6 +96,7 @@ class ExternalMovieService {
     if (cached != null && cached.isNotEmpty) {
       final ts = await LocalDbService.cacheTimestamp(_cacheKey);
       debugPrint('🌐 EXTERNAL - Using sqflite cache (ts: $ts)');
+      await MovieCatalogSyncService.applyLiveExternalMovies(cached);
       return ExternalMoviesResult(
         movies: cached,
         source: MovieSource.cache,

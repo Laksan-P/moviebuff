@@ -105,51 +105,57 @@ class AdminCatalogService {
     return out;
   }
 
-  /// Admin-local prefs → live catalogue movies → fallback seed if no catalogue.
+  static String _adminMovieKey(Map<String, dynamic> row) {
+    final id = row['id']?.toString().trim();
+    if (id != null && id.isNotEmpty && id != 'null') return 'id:$id';
+    return 't:${normalizeMovieKey(row['title']?.toString())}';
+  }
+
+  /// Live catalogue (latest posters) → admin-local overlay → seed if no catalogue.
   static Future<List<Map<String, dynamic>>> mergeMoviesForAdmin(
     List<Map<String, dynamic>> catalogueMovies,
   ) async {
     final hidden = await hiddenMovieKeys();
     final persisted = await MovieService.getMovies();
+    final byKey = <String, Map<String, dynamic>>{};
 
-    final out = <Map<String, dynamic>>[];
-    final seen = <String>{};
-
-    void push(Map<String, dynamic> row, String source) {
+    void put(Map<String, dynamic> row, String source) {
       final title = row['title']?.toString() ?? '';
       final k = normalizeMovieKey(title);
-      if (k.isEmpty || hidden.contains(k) || seen.contains(k)) return;
-      seen.add(k);
-      out.add({...row, '_adminSource': source});
-    }
-
-    for (final m in persisted) {
-      if (m['_adminLocal'] == true) {
-        final copy = Map<String, dynamic>.from(m)..remove('_adminLocal');
-        push(copy, 'admin_local');
-      }
+      if (k.isEmpty || hidden.contains(k)) return;
+      final mapKey = _adminMovieKey(row);
+      byKey[mapKey] = {
+        ...MovieCatalogUtils.normalizeCustomerMovie(
+          Map<String, dynamic>.from(row),
+        ),
+        '_adminSource': source,
+      };
     }
 
     if (catalogueMovies.isNotEmpty) {
       for (final raw in catalogueMovies) {
-        push(
-          MovieCatalogUtils.normalizeCustomerMovie(
-            Map<String, dynamic>.from(raw),
-          ),
-          'catalogue',
-        );
+        put(Map<String, dynamic>.from(raw), 'catalogue');
       }
+    }
+
+    for (final m in persisted) {
+      if (m['_adminLocal'] != true) continue;
+      final copy = Map<String, dynamic>.from(m)..remove('_adminLocal');
+      put(copy, 'admin_local');
+    }
+
+    if (byKey.isNotEmpty) {
       debugPrint(
-        '🎬 ADMIN MOVIES - Loaded ${catalogueMovies.length} movies from active catalogue',
+        'ADMIN MOVIES LOADED FROM SYNCED SOURCE: ${byKey.length} movies',
       );
-      return out;
+      return byKey.values.toList();
     }
 
     debugPrint('⚠️ ADMIN FALLBACK - Using default local data');
     for (final m in persisted) {
       if (m['_adminLocal'] == true) continue;
-      push(Map<String, dynamic>.from(m), 'seed');
+      put(Map<String, dynamic>.from(m), 'seed');
     }
-    return out;
+    return byKey.values.toList();
   }
 }

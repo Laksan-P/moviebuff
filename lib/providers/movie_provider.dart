@@ -106,15 +106,15 @@ class MovieProvider extends ChangeNotifier {
     );
   }
 
-  /// Re-merge local admin prefs with last external fetch (no forced network).
-  Future<void> refreshAfterAdminEdit() async {
+  /// Re-merge local admin prefs; uses cache unless [forceNetwork] is true.
+  Future<void> refreshAfterAdminEdit({bool forceNetwork = false}) async {
     debugPrint('🔄 CATALOGUE - Loading merged catalogue');
     _loading = true;
     _catalogueReady = false;
     notifyListeners();
 
     final result = await ExternalMovieService.fetchMovies(
-      forceRefresh: false,
+      forceRefresh: forceNetwork,
     );
     _movies = await CustomerCatalogService.mergeCustomerMovies(
       result.movies,

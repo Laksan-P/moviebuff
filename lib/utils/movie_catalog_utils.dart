@@ -32,7 +32,10 @@ class MovieCatalogUtils {
   ) {
     final m = Map<String, dynamic>.from(raw);
     final url = effectivePosterUrl(m);
-    if (url != null) m['image'] = url;
+    if (url != null) {
+      m['image'] = url;
+      m['posterUrl'] = url;
+    }
     return m;
   }
 

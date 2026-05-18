@@ -4,7 +4,7 @@ import 'admin_catalog_service.dart';
 import 'movie_service.dart';
 import 'theatre_service.dart';
 
-/// Customer-facing catalogue merge (admin local → external rows → seed fallback).
+/// Customer-facing catalogue merge (live external JSON → admin-local overlay → seed).
 class CustomerCatalogService {
   CustomerCatalogService._();
 
@@ -14,56 +14,49 @@ class CustomerCatalogService {
     return 't:${AdminCatalogService.normalizeMovieKey(m['title']?.toString())}';
   }
 
-  /// Merge priority: admin-local movies → external list → Sem 1 seed if [externalMovies] empty.
+  /// Merge priority: live external JSON (images) → admin-local overlay → seed if empty.
   static Future<List<Map<String, dynamic>>> mergeCustomerMovies(
     List<Map<String, dynamic>> externalMovies,
   ) async {
     final hidden = await AdminCatalogService.hiddenMovieKeys();
     final persisted = await MovieService.getMovies();
-    final byTitle = <String, Map<String, dynamic>>{};
+    final byKey = <String, Map<String, dynamic>>{};
 
     bool allow(Map<String, dynamic> m) {
       final t = AdminCatalogService.normalizeMovieKey(m['title']?.toString());
       return t.isNotEmpty && !hidden.contains(t);
     }
 
-    void putFromAdmin(Map<String, dynamic> m) {
-      if (!allow(m)) return;
-      final k = AdminCatalogService.normalizeMovieKey(m['title']?.toString());
-      byTitle[k] = MovieCatalogUtils.normalizeCustomerMovie(
-        Map<String, dynamic>.from(m),
-      );
-    }
-
-    for (final m in persisted) {
-      if (m['_adminLocal'] == true) {
-        final copy = Map<String, dynamic>.from(m)..remove('_adminLocal');
-        putFromAdmin(copy);
-      }
-    }
-
     if (externalMovies.isNotEmpty) {
       for (final raw in externalMovies) {
         final m = Map<String, dynamic>.from(raw);
         if (!allow(m)) continue;
-        final k = AdminCatalogService.normalizeMovieKey(m['title']?.toString());
-        if (!byTitle.containsKey(k)) {
-          byTitle[k] = MovieCatalogUtils.normalizeCustomerMovie(m);
-        }
+        final k = primaryMovieKey(m);
+        byKey[k] = MovieCatalogUtils.normalizeCustomerMovie(m);
       }
-      return byTitle.values.toList();
     }
 
     for (final m in persisted) {
-      if (m['_adminLocal'] == true) continue;
-      final copy = Map<String, dynamic>.from(m);
-      if (!allow(copy)) continue;
-      final k = AdminCatalogService.normalizeMovieKey(copy['title']?.toString());
-      if (!byTitle.containsKey(k)) {
-        byTitle[k] = MovieCatalogUtils.normalizeCustomerMovie(copy);
+      if (m['_adminLocal'] != true) continue;
+      if (!allow(m)) continue;
+      final k = primaryMovieKey(m);
+      final copy = Map<String, dynamic>.from(m)..remove('_adminLocal');
+      byKey[k] = MovieCatalogUtils.normalizeCustomerMovie(copy);
+    }
+
+    if (byKey.isEmpty) {
+      for (final m in persisted) {
+        if (m['_adminLocal'] == true) continue;
+        final copy = Map<String, dynamic>.from(m);
+        if (!allow(copy)) continue;
+        final k = primaryMovieKey(copy);
+        if (!byKey.containsKey(k)) {
+          byKey[k] = MovieCatalogUtils.normalizeCustomerMovie(copy);
+        }
       }
     }
-    return byTitle.values.toList();
+
+    return byKey.values.toList();
   }
 
   /// Theatres for customer: admin-local venues → venues from movie rows → Sem 1 fallback.

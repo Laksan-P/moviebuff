@@ -121,6 +121,20 @@ class LocalDbService {
     return rows;
   }
 
+  static Future<void> updateFavoriteImage(String title, String imageUrl) async {
+    if (title.trim().isEmpty || imageUrl.trim().isEmpty) return;
+    final db = await _database();
+    final n = await db.update(
+      _favTable,
+      {'image': imageUrl},
+      where: 'title = ?',
+      whereArgs: [title],
+    );
+    if (n > 0) {
+      debugPrint('⭐ SQFLITE - Updated favorite poster for: $title');
+    }
+  }
+
   // ---------- Movie cache ----------
 
   static Future<void> writeMovieCache(
