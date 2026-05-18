@@ -7,6 +7,7 @@ import 'login_screen.dart';
 import 'home_screen.dart';
 import '../providers/auth_provider.dart';
 import '../providers/movie_provider.dart';
+import '../services/profile_details_service.dart';
 import 'admin/admin_dashboard_screen.dart';
 import '../widgets/app_logo.dart';
 
@@ -21,6 +22,8 @@ class _SignupScreenState extends State<SignupScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _preferredCinemaController = TextEditingController();
+  final _favouriteGenreController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
@@ -56,23 +59,32 @@ class _SignupScreenState extends State<SignupScreen> {
 
     final message =
         auth.lastMessage ?? (ok ? 'Account created' : 'Registration failed');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
 
     if (!ok) return;
 
+    await ProfileDetailsService.mergeAfterRegistration(
+      email: auth.email!,
+      phone: _phoneController.text.trim(),
+      preferredCinema: _preferredCinemaController.text.trim(),
+      favouriteGenre: _favouriteGenreController.text.trim(),
+    );
+
+    if (!mounted) return;
     // ignore: unawaited_futures
     context.read<MovieProvider>().load(forceRefresh: true);
 
+    if (!mounted) return;
     if (auth.isAdmin) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
       );
     } else {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-      );
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
     }
   }
 
@@ -88,67 +100,267 @@ class _SignupScreenState extends State<SignupScreen> {
                 children: [
                   // Welcome Banner (Top on mobile)
                   Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 48,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary,
-                    borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(32),
-                      bottomRight: Radius.circular(32),
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 48,
                     ),
-                  ),
-                  child: Column(
-                    children: [
-                      const AppLogo(fontSize: 72),
-                      const SizedBox(height: 24),
-                      Text(
-                        'Welcome to MovieBuff!',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.outfit(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onPrimary,
-                          height: 1.1,
-                        ),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(32),
+                        bottomRight: Radius.circular(32),
                       ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Your gateway to premium cinema experiences. Find the best seats at the best theatres.',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.outfit(
-                          fontSize: 16,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onPrimary.withValues(alpha: 0.9),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Auth Content
-                Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Form(
-                    key: _formKey,
+                    ),
                     child: Column(
                       children: [
-                        // Toggle Switch
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .surfaceContainerHighest
-                                .withValues(alpha: 0.3),
-                            borderRadius: BorderRadius.circular(50),
+                        const AppLogo(fontSize: 72),
+                        const SizedBox(height: 24),
+                        Text(
+                          'Welcome to MovieBuff!',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.outfit(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.onPrimary,
+                            height: 1.1,
                           ),
-                          padding: const EdgeInsets.all(4),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Your gateway to premium cinema experiences. Find the best seats at the best theatres.',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.outfit(
+                            fontSize: 16,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onPrimary.withValues(alpha: 0.9),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Auth Content
+                  Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        children: [
+                          // Toggle Switch
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest
+                                  .withValues(alpha: 0.3),
+                              borderRadius: BorderRadius.circular(50),
+                            ),
+                            padding: const EdgeInsets.all(4),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                GestureDetector(
+                                  onTap: () {
+                                    Navigator.of(context).pushReplacement(
+                                      PageRouteBuilder(
+                                        pageBuilder:
+                                            (
+                                              context,
+                                              animation,
+                                              secondaryAnimation,
+                                            ) => const LoginScreen(),
+                                        transitionsBuilder:
+                                            (
+                                              context,
+                                              animation,
+                                              secondaryAnimation,
+                                              child,
+                                            ) {
+                                              return FadeTransition(
+                                                opacity: animation,
+                                                child: child,
+                                              );
+                                            },
+                                      ),
+                                    );
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                      vertical: 8,
+                                    ),
+                                    color: Colors.transparent,
+                                    child: Text(
+                                      'Login',
+                                      style: GoogleFonts.outfit(
+                                        fontWeight: FontWeight.bold,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withValues(alpha: 0.5),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.surface,
+                                    borderRadius: BorderRadius.circular(50),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .shadow
+                                            .withValues(alpha: 0.1),
+                                        blurRadius: 2,
+                                      ),
+                                    ],
+                                  ),
+                                  child: Text(
+                                    'Register',
+                                    style: GoogleFonts.outfit(
+                                      fontWeight: FontWeight.bold,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurface,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+
+                          Text(
+                            'Create Account',
+                            style: GoogleFonts.outfit(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Start your journey with us today',
+                            style: GoogleFonts.outfit(
+                              fontSize: 14,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.5),
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+
+                          CustomTextField(
+                            label: 'Full Name',
+                            hint: 'Enter your full name',
+                            controller: _nameController,
+                            validator: (value) =>
+                                value!.isEmpty ? 'Name required' : null,
+                          ),
+                          const SizedBox(height: 20),
+                          CustomTextField(
+                            label: 'Email Address',
+                            hint: 'you@example.com',
+                            keyboardType: TextInputType.emailAddress,
+                            controller: _emailController,
+                            validator: (value) =>
+                                !value!.contains('@') ? 'Invalid email' : null,
+                          ),
+                          const SizedBox(height: 20),
+                          CustomTextField(
+                            label: 'Phone Number',
+                            hint: 'Your phone number',
+                            keyboardType: TextInputType.phone,
+                            controller: _phoneController,
+                            validator: (value) =>
+                                value!.isEmpty ? 'Phone required' : null,
+                          ),
+                          const SizedBox(height: 20),
+                          CustomTextField(
+                            label: 'Preferred cinema (optional)',
+                            hint: 'e.g. Scope Cinemas Colombo',
+                            controller: _preferredCinemaController,
+                          ),
+                          const SizedBox(height: 20),
+                          CustomTextField(
+                            label: 'Favourite genre (optional)',
+                            hint: 'e.g. Action, Drama',
+                            controller: _favouriteGenreController,
+                          ),
+                          const SizedBox(height: 20),
+                          CustomTextField(
+                            label: 'Password',
+                            hint: 'Create a strong password',
+                            isPassword: true,
+                            controller: _passwordController,
+                            validator: (value) =>
+                                value!.length < 6 ? 'Too short' : null,
+                          ),
+                          const SizedBox(height: 20),
+                          CustomTextField(
+                            label: 'Confirm Password',
+                            hint: 'Confirm your password',
+                            isPassword: true,
+                            controller: _confirmPasswordController,
+                            validator: (value) =>
+                                value != _passwordController.text
+                                ? 'Passwords do not match'
+                                : null,
+                          ),
+                          const SizedBox(height: 24),
+
+                          Row(
                             children: [
+                              Checkbox(
+                                value: _termsAccepted,
+                                activeColor: Theme.of(
+                                  context,
+                                ).colorScheme.primary,
+                                onChanged: (v) =>
+                                    setState(() => _termsAccepted = v!),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  'I agree to the terms of service',
+                                  style: GoogleFonts.outfit(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.7),
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          CustomButton(
+                            text: 'Create Account',
+                            onPressed: _signup,
+                            isLoading: _isLoading,
+                          ),
+
+                          const SizedBox(height: 24),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                "Already have an account? ",
+                                style: GoogleFonts.outfit(
+                                  color: Colors.grey[500],
+                                ),
+                              ),
                               GestureDetector(
                                 onTap: () {
                                   Navigator.of(context).pushReplacement(
@@ -174,209 +386,27 @@ class _SignupScreenState extends State<SignupScreen> {
                                     ),
                                   );
                                 },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 24,
-                                    vertical: 8,
-                                  ),
-                                  color: Colors.transparent,
-                                  child: Text(
-                                    'Login',
-                                    style: GoogleFonts.outfit(
-                                      fontWeight: FontWeight.bold,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withValues(alpha: 0.5),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 24,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.surface,
-                                  borderRadius: BorderRadius.circular(50),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .shadow
-                                          .withValues(alpha: 0.1),
-                                      blurRadius: 2,
-                                    ),
-                                  ],
-                                ),
                                 child: Text(
-                                  'Register',
+                                  'Sign In',
                                   style: GoogleFonts.outfit(
-                                    fontWeight: FontWeight.bold,
                                     color: Theme.of(
                                       context,
-                                    ).colorScheme.onSurface,
+                                    ).colorScheme.primary,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ),
                             ],
                           ),
-                        ),
-                        const SizedBox(height: 32),
-
-                        Text(
-                          'Create Account',
-                          style: GoogleFonts.outfit(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Start your journey with us today',
-                          style: GoogleFonts.outfit(
-                            fontSize: 14,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withValues(alpha: 0.5),
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-
-                        CustomTextField(
-                          label: 'Full Name',
-                          hint: 'Enter your full name',
-                          controller: _nameController,
-                          validator: (value) =>
-                              value!.isEmpty ? 'Name required' : null,
-                        ),
-                        const SizedBox(height: 20),
-                        CustomTextField(
-                          label: 'Email Address',
-                          hint: 'you@example.com',
-                          keyboardType: TextInputType.emailAddress,
-                          controller: _emailController,
-                          validator: (value) =>
-                              !value!.contains('@') ? 'Invalid email' : null,
-                        ),
-                        const SizedBox(height: 20),
-                        CustomTextField(
-                          label: 'Phone Number',
-                          hint: 'Your phone number',
-                          keyboardType: TextInputType.phone,
-                          controller: _phoneController,
-                          validator: (value) =>
-                              value!.isEmpty ? 'Phone required' : null,
-                        ),
-                        const SizedBox(height: 20),
-                        CustomTextField(
-                          label: 'Password',
-                          hint: 'Create a strong password',
-                          isPassword: true,
-                          controller: _passwordController,
-                          validator: (value) =>
-                              value!.length < 6 ? 'Too short' : null,
-                        ),
-                        const SizedBox(height: 20),
-                        CustomTextField(
-                          label: 'Confirm Password',
-                          hint: 'Confirm your password',
-                          isPassword: true,
-                          controller: _confirmPasswordController,
-                          validator: (value) =>
-                              value != _passwordController.text
-                              ? 'Passwords do not match'
-                              : null,
-                        ),
-                        const SizedBox(height: 24),
-
-                        Row(
-                          children: [
-                            Checkbox(
-                              value: _termsAccepted,
-                              activeColor: Theme.of(
-                                context,
-                              ).colorScheme.primary,
-                              onChanged: (v) =>
-                                  setState(() => _termsAccepted = v!),
-                            ),
-                            Expanded(
-                              child: Text(
-                                'I agree to the terms of service',
-                                style: GoogleFonts.outfit(
-                                  color: Theme.of(context).colorScheme.onSurface
-                                      .withValues(alpha: 0.7),
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        CustomButton(
-                          text: 'Create Account',
-                          onPressed: _signup,
-                          isLoading: _isLoading,
-                        ),
-
-                        const SizedBox(height: 24),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              "Already have an account? ",
-                              style: GoogleFonts.outfit(
-                                color: Colors.grey[500],
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: () {
-                                Navigator.of(context).pushReplacement(
-                                  PageRouteBuilder(
-                                    pageBuilder:
-                                        (
-                                          context,
-                                          animation,
-                                          secondaryAnimation,
-                                        ) => const LoginScreen(),
-                                    transitionsBuilder:
-                                        (
-                                          context,
-                                          animation,
-                                          secondaryAnimation,
-                                          child,
-                                        ) {
-                                          return FadeTransition(
-                                            opacity: animation,
-                                            child: child,
-                                          );
-                                        },
-                                  ),
-                                );
-                              },
-                              child: Text(
-                                'Sign In',
-                                style: GoogleFonts.outfit(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
-      ),
       ),
     );
   }

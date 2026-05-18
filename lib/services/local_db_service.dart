@@ -84,22 +84,22 @@ class LocalDbService {
 
   static Future<void> addFavorite(Map<String, dynamic> movie) async {
     final db = await _database();
-    await db.insert(
-      _favTable,
-      {
-        'title': movie['title'],
-        'image': movie['image'] ?? '',
-        'genre': movie['genre'] ?? '',
-        'added_at': DateTime.now().millisecondsSinceEpoch,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.insert(_favTable, {
+      'title': movie['title'],
+      'image': movie['image'] ?? '',
+      'genre': movie['genre'] ?? '',
+      'added_at': DateTime.now().millisecondsSinceEpoch,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
     debugPrint('⭐ SQFLITE - Added favorite: ${movie['title']}');
   }
 
   static Future<void> removeFavorite(String title) async {
     final db = await _database();
-    final n = await db.delete(_favTable, where: 'title = ?', whereArgs: [title]);
+    final n = await db.delete(
+      _favTable,
+      where: 'title = ?',
+      whereArgs: [title],
+    );
     debugPrint('⭐ SQFLITE - Removed favorite ($n row): $title');
   }
 
@@ -251,13 +251,27 @@ class LocalDbService {
         'created_at': createdAt,
         'synced': 0,
       });
-      debugPrint(
-        '✅ SQFLITE WRITE SUCCESS: booking inserted with id $rowId',
-      );
+      debugPrint('✅ SQFLITE WRITE SUCCESS: booking inserted with id $rowId');
       return rowId;
     } catch (e, st) {
       debugPrint('❌ SQFLITE ERROR: insertBooking — $e\n$st');
       rethrow;
+    }
+  }
+
+  static Future<int> countBookingsForUser(String userEmail) async {
+    try {
+      final db = await _database();
+      final r = await db.rawQuery(
+        'SELECT COUNT(*) AS c FROM $_bookingsTable WHERE user_email = ?',
+        [userEmail],
+      );
+      final n = Sqflite.firstIntValue(r) ?? 0;
+      debugPrint('🗄️ SQFLITE - countBookingsForUser($userEmail) = $n');
+      return n;
+    } catch (e, st) {
+      debugPrint('❌ SQFLITE ERROR: countBookingsForUser — $e\n$st');
+      return 0;
     }
   }
 
@@ -297,9 +311,7 @@ class LocalDbService {
           '✅ SQFLITE UPDATE SUCCESS: booking status updated (id=$id → $status)',
         );
       } else {
-        debugPrint(
-          '❌ SQFLITE ERROR: updateBookingStatus — no row for id=$id',
-        );
+        debugPrint('❌ SQFLITE ERROR: updateBookingStatus — no row for id=$id');
       }
     } catch (e, st) {
       debugPrint('❌ SQFLITE ERROR: updateBookingStatus — $e\n$st');
@@ -321,7 +333,11 @@ class LocalDbService {
   static Future<List<Map<String, dynamic>>> getUnsyncedBookings() async {
     try {
       final db = await _database();
-      final rows = await db.query(_bookingsTable, where: 'synced = ?', whereArgs: [0]);
+      final rows = await db.query(
+        _bookingsTable,
+        where: 'synced = ?',
+        whereArgs: [0],
+      );
       return rows.map((r) => Map<String, dynamic>.from(r)).toList();
     } catch (e, st) {
       debugPrint('❌ SQFLITE ERROR: getUnsyncedBookings — $e\n$st');

@@ -22,11 +22,12 @@ class ProfilePhotoService {
   static Future<void> savePath(String path) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(prefsKey, path);
-    debugPrint('📷 PROFILE PHOTO - saved locally');
+    debugPrint('📷 PROFILE PHOTO - updated');
   }
 
   static Future<void> clear() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(prefsKey);
+    debugPrint('📷 PROFILE PHOTO - removed');
   }
 }

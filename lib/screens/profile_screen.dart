@@ -5,8 +5,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
+import '../providers/movie_provider.dart';
 import '../providers/theme_provider.dart';
 import '../services/device_service.dart';
+import '../services/local_db_service.dart';
+import '../services/profile_details_service.dart';
 import '../services/profile_photo_service.dart';
 import '../widgets/custom_button.dart';
 import 'login_screen.dart';
@@ -20,6 +23,9 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   String? _photoPath;
+  ProfileDetails _details = const ProfileDetails();
+  int _bookingCount = 0;
+  String? _loadedForEmail;
 
   @override
   void initState() {
@@ -27,9 +33,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadPhotoPath();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final e = context.read<AuthProvider>().email;
+    if (e != _loadedForEmail) {
+      _loadedForEmail = e;
+      _reloadProfile();
+    }
+  }
+
   Future<void> _loadPhotoPath() async {
     final path = await ProfilePhotoService.getValidPath();
     if (mounted) setState(() => _photoPath = path);
+  }
+
+  Future<void> _reloadProfile() async {
+    final auth = context.read<AuthProvider>();
+    final details = await ProfileDetailsService.load(auth.email);
+    var bookings = 0;
+    final mail = auth.email?.trim() ?? '';
+    if (mail.isNotEmpty) {
+      try {
+        bookings = await LocalDbService.countBookingsForUser(mail);
+      } catch (_) {
+        bookings = 0;
+      }
+    }
+    if (mounted) {
+      setState(() {
+        _details = details;
+        _bookingCount = bookings;
+      });
+    }
+  }
+
+  String _notAdded(String? s) {
+    final t = s?.trim() ?? '';
+    return t.isEmpty ? 'Not added yet' : t;
   }
 
   Future<void> _pickPhoto({required bool fromCamera}) async {
@@ -75,290 +116,683 @@ class _ProfileScreenState extends State<ProfileScreen> {
     ).showSnackBar(const SnackBar(content: Text('Profile photo removed.')));
   }
 
+  void _openEditProfile(ThemeData theme, AuthProvider auth) {
+    final nameC = TextEditingController(
+      text: _details.displayNameOr(auth.name ?? 'User'),
+    );
+    final phoneC = TextEditingController(text: _details.phone);
+    final cinemaC = TextEditingController(text: _details.preferredCinema);
+    final genreC = TextEditingController(text: _details.favouriteGenre);
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: theme.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetCtx) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.viewInsetsOf(sheetCtx).bottom,
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Edit profile',
+                  style: GoogleFonts.outfit(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Email and role come from your login and cannot be changed here.',
+                  style: GoogleFonts.outfit(
+                    fontSize: 12,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: 'Email (read-only)',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    auth.email ?? '—',
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: 'Role (read-only)',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    auth.isAdmin ? 'Admin' : 'Customer',
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: nameC,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: InputDecoration(
+                    labelText: 'Full name',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: phoneC,
+                  keyboardType: TextInputType.phone,
+                  decoration: InputDecoration(
+                    labelText: 'Phone number',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: cinemaC,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: InputDecoration(
+                    labelText: 'Preferred cinema',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: genreC,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: InputDecoration(
+                    labelText: 'Favourite genre',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                CustomButton(
+                  text: 'Save changes',
+                  onPressed: () async {
+                    final updated = ProfileDetails(
+                      displayNameOverride: nameC.text.trim(),
+                      phone: phoneC.text.trim(),
+                      preferredCinema: cinemaC.text.trim(),
+                      favouriteGenre: genreC.text.trim(),
+                    );
+                    await ProfileDetailsService.save(auth.email, updated);
+                    if (sheetCtx.mounted) Navigator.pop(sheetCtx);
+                    if (!mounted) return;
+                    setState(() => _details = updated);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Profile details saved.')),
+                    );
+                  },
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () => Navigator.pop(sheetCtx),
+                  child: Text(
+                    'Cancel',
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    ).whenComplete(() {
+      nameC.dispose();
+      phoneC.dispose();
+      cinemaC.dispose();
+      genreC.dispose();
+    });
+  }
+
+  Widget _sectionHeader(String title, {IconData? icon}) {
+    return Row(
+      children: [
+        if (icon != null) ...[
+          Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 8),
+        ],
+        Expanded(
+          child: Text(
+            title,
+            style: GoogleFonts.outfit(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _roundedCard({required Widget child}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+
+  Widget _detailLine(String label, String value) {
+    final muted = Theme.of(
+      context,
+    ).colorScheme.onSurface.withValues(alpha: 0.55);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 11,
+            child: Text(
+              label,
+              style: GoogleFonts.outfit(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: muted,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 14,
+            child: Text(
+              value,
+              style: GoogleFonts.outfit(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                height: 1.25,
+              ),
+              softWrap: true,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _activityLine(IconData icon, String label, String value) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: scheme.primary.withValues(alpha: 0.9)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: GoogleFonts.outfit(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurface.withValues(alpha: 0.55),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final themeProv = context.watch<ThemeProvider>();
-    final userName = auth.name ?? 'User';
+    final movieProv = context.watch<MovieProvider>();
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final muted = scheme.onSurface.withValues(alpha: 0.65);
+
+    final displayName = _details.displayNameOr(auth.name ?? 'User');
     final userEmail = auth.email ?? '';
-    final muted = Theme.of(
-      context,
-    ).colorScheme.onSurface.withValues(alpha: 0.65);
-    final scheme = Theme.of(context).colorScheme;
+    final membershipLine = auth.isAdmin
+        ? 'MovieBuff Admin'
+        : 'MovieBuff Member';
+    final hasPhoto = _photoPath != null && File(_photoPath!).existsSync();
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Profile',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        foregroundColor: Theme.of(context).colorScheme.onSurface,
-        elevation: 0,
-      ),
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: scheme.surface,
       body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 800),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 96),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Text(
-                    'Set your MovieBuff profile photo',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.outfit(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  CircleAvatar(
-                    radius: 56,
-                    backgroundColor: scheme.primary.withValues(alpha: 0.12),
-                    backgroundImage:
-                        _photoPath != null && File(_photoPath!).existsSync()
-                        ? FileImage(File(_photoPath!))
-                        : null,
-                    child: _photoPath != null && File(_photoPath!).existsSync()
-                        ? null
-                        : Icon(
-                            Icons.person_outline,
-                            size: 56,
-                            color: scheme.primary,
+        child: RefreshIndicator(
+          onRefresh: _reloadProfile,
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverAppBar(
+                floating: true,
+                pinned: false,
+                elevation: 0,
+                backgroundColor: scheme.surface,
+                foregroundColor: scheme.onSurface,
+                title: Text(
+                  'My profile',
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 110),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(22),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            scheme.primary,
+                            scheme.primary.withValues(alpha: 0.82),
+                          ],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: scheme.primary.withValues(alpha: 0.35),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
                           ),
-                  ),
-                  const SizedBox(height: 12),
-                  if (_photoPath == null)
-                    Text(
-                      'Add profile photo',
-                      style: GoogleFonts.outfit(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: scheme.onSurface,
+                        ],
                       ),
-                    )
-                  else
-                    Text(
-                      'Profile photo',
-                      style: GoogleFonts.outfit(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: scheme.onSurface,
-                      ),
-                    ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'This profile photo is saved locally on this device.',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.outfit(
-                      fontSize: 12,
-                      color: muted,
-                      height: 1.35,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: CustomButton(
-                          text: 'Take Photo',
-                          onPressed: () => _pickPhoto(fromCamera: true),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: CustomButton(
-                          text: 'Choose from Gallery',
-                          isOutlined: true,
-                          onPressed: () => _pickPhoto(fromCamera: false),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (_photoPath != null && File(_photoPath!).existsSync()) ...[
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton(
-                        onPressed: _removePhoto,
-                        child: Text(
-                          'Remove Photo',
-                          style: GoogleFonts.outfit(
-                            fontWeight: FontWeight.w600,
-                            color: scheme.error,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 32),
-                  Text(
-                    userName,
-                    style: GoogleFonts.outfit(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  if (userEmail.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      userEmail,
-                      style: GoogleFonts.outfit(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.6),
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 12),
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: scheme.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          auth.isAdmin ? 'Role: Admin' : 'Role: Customer',
-                          style: GoogleFonts.outfit(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: scheme.primary,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: scheme.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          auth.source == AuthSource.api
-                              ? 'Signed in via SSP API'
-                              : auth.source == AuthSource.local
-                              ? 'Signed in locally (offline mode)'
-                              : 'Not signed in',
-                          style: GoogleFonts.outfit(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: scheme.primary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 32),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .surfaceContainerHighest
-                          .withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Theme',
-                          style: GoogleFonts.outfit(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Defaults to your device setting. You can override below.',
-                          style: GoogleFonts.outfit(
-                            fontSize: 12,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withValues(alpha: 0.6),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        SegmentedButton<ThemeMode>(
-                          segments: const [
-                            ButtonSegment(
-                              value: ThemeMode.system,
-                              label: Text('System'),
-                              icon: Icon(Icons.brightness_auto),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 26, 20, 22),
+                        child: Column(
+                          children: [
+                            CircleAvatar(
+                              radius: 52,
+                              backgroundColor: scheme.onPrimary.withValues(
+                                alpha: 0.25,
+                              ),
+                              backgroundImage: hasPhoto
+                                  ? FileImage(File(_photoPath!))
+                                  : null,
+                              child: hasPhoto
+                                  ? null
+                                  : Icon(
+                                      Icons.person_rounded,
+                                      size: 52,
+                                      color: scheme.onPrimary,
+                                    ),
                             ),
-                            ButtonSegment(
-                              value: ThemeMode.light,
-                              label: Text('Light'),
-                              icon: Icon(Icons.light_mode),
+                            const SizedBox(height: 14),
+                            Text(
+                              displayName,
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.outfit(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                color: scheme.onPrimary,
+                                height: 1.15,
+                              ),
                             ),
-                            ButtonSegment(
-                              value: ThemeMode.dark,
-                              label: Text('Dark'),
-                              icon: Icon(Icons.dark_mode),
+                            if (userEmail.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                userEmail,
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.outfit(
+                                  fontSize: 14,
+                                  color: scheme.onPrimary.withValues(
+                                    alpha: 0.9,
+                                  ),
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 12),
+                            Wrap(
+                              alignment: WrapAlignment.center,
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _headerChip(
+                                  scheme.onPrimary,
+                                  auth.isAdmin ? 'Admin' : 'Customer',
+                                  Icons.badge_outlined,
+                                ),
+                                _headerChip(
+                                  scheme.onPrimary,
+                                  auth.source == AuthSource.api
+                                      ? 'Signed in via SSP API'
+                                      : auth.source == AuthSource.local
+                                      ? 'Signed in locally (offline)'
+                                      : 'Not signed in',
+                                  Icons.verified_outlined,
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              membershipLine,
+                              style: GoogleFonts.outfit(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.4,
+                                color: scheme.onPrimary.withValues(alpha: 0.95),
+                              ),
                             ),
                           ],
-                          selected: {themeProv.mode},
-                          onSelectionChanged: (s) {
-                            themeProv.setMode(s.first);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Theme mode: ${s.first.name}'),
-                              ),
-                            );
-                          },
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 32),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: CustomButton(
-                      text: 'Logout',
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white.withValues(alpha: 0.1)
-                          : Theme.of(
-                              context,
-                            ).colorScheme.surfaceContainerHighest,
-                      textColor: Theme.of(context).colorScheme.primary,
-                      onPressed: () async {
-                        final messenger = ScaffoldMessenger.of(context);
-                        final navigator = Navigator.of(context);
-                        await context.read<AuthProvider>().logout();
-                        messenger.showSnackBar(
-                          const SnackBar(content: Text('Signed out')),
-                        );
-                        navigator.pushAndRemoveUntil(
-                          MaterialPageRoute(
-                            builder: (_) => const LoginScreen(),
+                    const SizedBox(height: 20),
+                    _roundedCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _sectionHeader(
+                            'Profile photo',
+                            icon: Icons.photo_camera_outlined,
                           ),
-                          (route) => false,
-                        );
-                      },
+                          const SizedBox(height: 6),
+                          Text(
+                            'Saved locally on this device',
+                            style: GoogleFonts.outfit(
+                              fontSize: 12,
+                              color: muted,
+                              height: 1.35,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: CustomButton(
+                                  text: 'Take Photo',
+                                  onPressed: () => _pickPhoto(fromCamera: true),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: CustomButton(
+                                  text: 'Choose from Gallery',
+                                  isOutlined: true,
+                                  onPressed: () =>
+                                      _pickPhoto(fromCamera: false),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (hasPhoto) ...[
+                            const SizedBox(height: 10),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: _removePhoto,
+                                icon: Icon(
+                                  Icons.delete_outline,
+                                  color: scheme.error,
+                                ),
+                                label: Text(
+                                  'Remove Photo',
+                                  style: GoogleFonts.outfit(
+                                    fontWeight: FontWeight.w700,
+                                    color: scheme.error,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                    _roundedCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _sectionHeader(
+                                  'Personal details',
+                                  icon: Icons.person_outline,
+                                ),
+                              ),
+                              TextButton.icon(
+                                onPressed: () => _openEditProfile(theme, auth),
+                                icon: const Icon(Icons.edit_outlined, size: 18),
+                                label: Text(
+                                  'Edit',
+                                  style: GoogleFonts.outfit(
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          _detailLine('Full name', displayName),
+                          _detailLine(
+                            'Email',
+                            userEmail.isEmpty ? 'Not added yet' : userEmail,
+                          ),
+                          _detailLine(
+                            'Phone number',
+                            _notAdded(_details.phone),
+                          ),
+                          _detailLine(
+                            'Preferred cinema',
+                            _notAdded(_details.preferredCinema),
+                          ),
+                          _detailLine(
+                            'Favourite genre',
+                            _notAdded(_details.favouriteGenre),
+                          ),
+                          _detailLine(
+                            'Role',
+                            auth.isAdmin ? 'Admin' : 'Customer',
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _roundedCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _sectionHeader(
+                            'My MovieBuff activity',
+                            icon: Icons.local_movies_outlined,
+                          ),
+                          const SizedBox(height: 14),
+                          _activityLine(
+                            Icons.favorite_outline,
+                            'Saved favourites',
+                            '${movieProv.favorites.length} in sqflite',
+                          ),
+                          _activityLine(
+                            Icons.confirmation_number_outlined,
+                            'Local bookings',
+                            '$_bookingCount saved on device',
+                          ),
+                          _activityLine(
+                            Icons.theaters_outlined,
+                            'Preferred cinema',
+                            _notAdded(_details.preferredCinema),
+                          ),
+                          _activityLine(
+                            Icons.category_outlined,
+                            'Favourite genre',
+                            _notAdded(_details.favouriteGenre),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _roundedCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _sectionHeader(
+                            'App preferences',
+                            icon: Icons.tune_rounded,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Theme follows your device unless you choose below.',
+                            style: GoogleFonts.outfit(
+                              fontSize: 12,
+                              color: muted,
+                              height: 1.35,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: ThemeMode.values.map((m) {
+                              final selected = themeProv.mode == m;
+                              final label = switch (m) {
+                                ThemeMode.system => 'System',
+                                ThemeMode.light => 'Light',
+                                ThemeMode.dark => 'Dark',
+                              };
+                              return FilterChip(
+                                selected: selected,
+                                label: Text(
+                                  label,
+                                  style: GoogleFonts.outfit(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                onSelected: (_) {
+                                  themeProv.setMode(m);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Theme: ${m.name}')),
+                                  );
+                                },
+                              );
+                            }).toList(),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _roundedCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _sectionHeader(
+                            'Account actions',
+                            icon: Icons.logout_rounded,
+                          ),
+                          const SizedBox(height: 14),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: () async {
+                                final messenger = ScaffoldMessenger.of(context);
+                                final navigator = Navigator.of(context);
+                                await context.read<AuthProvider>().logout();
+                                messenger.showSnackBar(
+                                  const SnackBar(content: Text('Signed out')),
+                                );
+                                navigator.pushAndRemoveUntil(
+                                  MaterialPageRoute(
+                                    builder: (_) => const LoginScreen(),
+                                  ),
+                                  (route) => false,
+                                );
+                              },
+                              icon: Icon(Icons.logout, color: scheme.primary),
+                              label: Text(
+                                'Log out',
+                                style: GoogleFonts.outfit(
+                                  fontWeight: FontWeight.w800,
+                                  color: scheme.primary,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ]),
+                ),
               ),
-            ),
+            ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _headerChip(Color onPrimary, String text, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: onPrimary.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: onPrimary.withValues(alpha: 0.45)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: onPrimary),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: GoogleFonts.outfit(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: onPrimary,
+            ),
+          ),
+        ],
       ),
     );
   }
