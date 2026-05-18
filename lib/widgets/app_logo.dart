@@ -3,24 +3,37 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../core/theme/app_colors.dart';
 
-/// Brand mark — tints for light theme so white-only assets stay visible.
+/// Brand mark from [assets/images/logo.png].
 class AppLogo extends StatelessWidget {
   final double fontSize;
   final Color? color;
+  final double? maxWidth;
 
-  const AppLogo({super.key, this.fontSize = 28, this.color});
+  const AppLogo({
+    super.key,
+    this.fontSize = 28,
+    this.color,
+    this.maxWidth,
+  });
+
+  static const _assetPath = 'assets/images/logo.png';
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final isLight = scheme.brightness == Brightness.light;
-    final height = fontSize * 1.5;
-    final fallbackColor = color ?? (isLight ? AppColors.text : Colors.white);
+    final height = fontSize * 1.45;
+    final widthCap = maxWidth ?? height * 3.2;
+    final fallbackColor =
+        color ?? (scheme.brightness == Brightness.light
+            ? AppColors.text
+            : Colors.white);
 
-    Widget mark = Image.asset(
-      'assets/images/logo.png',
+    final mark = Image.asset(
+      _assetPath,
       height: height,
       fit: BoxFit.contain,
+      filterQuality: FilterQuality.medium,
+      semanticLabel: 'MovieBuff',
       errorBuilder: (context, error, stackTrace) {
         return Text(
           'MovieBuff',
@@ -34,16 +47,13 @@ class AppLogo extends StatelessWidget {
       },
     );
 
-    if (isLight) {
-      mark = ColorFiltered(
-        colorFilter: const ColorFilter.mode(
-          AppColors.primaryBlueDeep,
-          BlendMode.srcIn,
-        ),
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: widthCap, maxHeight: height),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.center,
         child: mark,
-      );
-    }
-
-    return mark;
+      ),
+    );
   }
 }

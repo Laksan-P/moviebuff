@@ -351,30 +351,19 @@ class _DeviceScreenState extends State<DeviceScreen> {
             ),
 
             const SizedBox(height: 20),
-            _sectionTitle('Camera'),
-            _card(
-              icon: Icons.photo_camera_outlined,
-              iconColor: Theme.of(context).colorScheme.primary,
-              title: 'Camera & photo library',
-              subtitle:
-                  'MovieBuff can use your camera and gallery when you choose '
-                  'a profile photo from the Profile tab.',
-              child: Padding(
-                padding: const EdgeInsets.only(top: 10),
-                child: Text(
-                  'No photo is stored from this screen — it is a capability '
-                  'overview only.',
-                  style: GoogleFonts.outfit(
-                    fontSize: 11,
-                    color: muted,
-                    height: 1.35,
-                  ),
+            _sectionTitle('Saved favourites'),
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 10),
+              child: Text(
+                'Profile photo capture is available from the Profile tab.',
+                style: GoogleFonts.outfit(
+                  fontSize: 11,
+                  color: muted,
+                  height: 1.35,
+                  fontStyle: FontStyle.italic,
                 ),
               ),
             ),
-
-            const SizedBox(height: 20),
-            _sectionTitle('Saved favourites'),
             if (movieProv.favorites.isEmpty)
               _card(
                 icon: Icons.favorite_border,

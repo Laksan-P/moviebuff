@@ -354,7 +354,7 @@ class _HomeTabPageState extends State<_HomeTabPage>
                 constraints: BoxConstraints(maxWidth: contentWidth),
                 child: AppBar(
                   automaticallyImplyLeading: false,
-                  title: const AppLogo(fontSize: 48),
+                  title: const AppLogo(fontSize: 48, maxWidth: 220),
                   actions: [
                     if (_userName != null) ...[
                       Center(

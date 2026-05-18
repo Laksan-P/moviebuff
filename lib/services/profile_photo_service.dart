@@ -12,7 +12,7 @@ class ProfilePhotoService {
   /// a new user never inherits another account's photo; removed on first save.
   static const _legacyGlobalKey = 'profile_pic_path';
 
-  /// Visible prefix for debugging / prefs inspection.
+  /// Per-user key: `profile_photo_path_<sanitizedEmail>` (e.g. profile_photo_path_user_example_com).
   static const prefsKeyPrefix = 'profile_photo_path_';
 
   /// Sanitize email for a stable SharedPreferences key segment.
@@ -56,7 +56,7 @@ class ProfilePhotoService {
 
     final path = prefs.getString(key);
     if (path != null && path.isNotEmpty && File(path).existsSync()) {
-      debugPrint('📷 PROFILE PHOTO - Loaded for $label');
+      debugPrint('📷 PROFILE PHOTO - Loaded for $label (key: $key)');
       return path;
     }
 
@@ -74,7 +74,7 @@ class ProfilePhotoService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(key, path);
     await _removeLegacyGlobal(prefs);
-    debugPrint('📷 PROFILE PHOTO - Saved for $label');
+    debugPrint('📷 PROFILE PHOTO - Saved for $label (key: $key)');
   }
 
   static Future<void> clear(String? email) async {

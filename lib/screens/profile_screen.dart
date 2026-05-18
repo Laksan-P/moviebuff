@@ -82,7 +82,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() {
         _details = details;
         _bookingCount = bookings;
-        _photoPath = path;
+        _photoPath = mail.isEmpty ? null : path;
       });
     }
   }
@@ -99,16 +99,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ? await DeviceService.takePhoto()
         : await DeviceService.pickFromGallery();
 
-    if (result.cancelled) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            fromCamera ? 'Camera cancelled.' : 'Gallery cancelled.',
-          ),
-        ),
-      );
-      return;
-    }
+    if (result.cancelled) return;
 
     if (result.errorMessage != null) {
       messenger.showSnackBar(SnackBar(content: Text(result.errorMessage!)));
@@ -144,6 +135,198 @@ class _ProfileScreenState extends State<ProfileScreen> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Profile photo removed.')));
+  }
+
+  void _openPhotoOptionsSheet() {
+    final scheme = Theme.of(context).colorScheme;
+    final hasPhoto = _photoPath != null && File(_photoPath!).existsSync();
+
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: scheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (sheetCtx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Profile photo',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.outfit(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Saved on this device for your account only',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.outfit(
+                    fontSize: 12,
+                    color: scheme.onSurface.withValues(alpha: 0.6),
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _photoSheetOption(
+                  sheetCtx,
+                  icon: Icons.photo_camera_outlined,
+                  label: 'Take Photo',
+                  onTap: () {
+                    Navigator.pop(sheetCtx);
+                    _pickPhoto(fromCamera: true);
+                  },
+                ),
+                const SizedBox(height: 8),
+                _photoSheetOption(
+                  sheetCtx,
+                  icon: Icons.photo_library_outlined,
+                  label: 'Choose from Gallery',
+                  onTap: () {
+                    Navigator.pop(sheetCtx);
+                    _pickPhoto(fromCamera: false);
+                  },
+                ),
+                if (hasPhoto) ...[
+                  const SizedBox(height: 8),
+                  _photoSheetOption(
+                    sheetCtx,
+                    icon: Icons.delete_outline,
+                    label: 'Remove Photo',
+                    isDestructive: true,
+                    onTap: () {
+                      Navigator.pop(sheetCtx);
+                      _removePhoto();
+                    },
+                  ),
+                ],
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () => Navigator.pop(sheetCtx),
+                  child: Text(
+                    'Cancel',
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _photoSheetOption(
+    BuildContext sheetCtx, {
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    bool isDestructive = false,
+  }) {
+    final scheme = Theme.of(sheetCtx).colorScheme;
+    final color = isDestructive ? scheme.error : scheme.onSurface;
+
+    return Material(
+      color: scheme.surfaceContainerHighest.withValues(alpha: 0.45),
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Icon(icon, color: isDestructive ? scheme.error : scheme.primary),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  label,
+                  style: GoogleFonts.outfit(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: color,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: scheme.onSurface.withValues(alpha: 0.35),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _profileAvatar(ColorScheme scheme, bool hasPhoto) {
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.center,
+      children: [
+        CircleAvatar(
+          radius: 52,
+          backgroundColor: scheme.onPrimary.withValues(alpha: 0.25),
+          backgroundImage:
+              hasPhoto ? FileImage(File(_photoPath!)) : null,
+          child: hasPhoto
+              ? null
+              : Icon(
+                  Icons.person_rounded,
+                  size: 52,
+                  color: scheme.onPrimary,
+                ),
+        ),
+        Positioned(
+          right: -2,
+          bottom: -2,
+          child: Material(
+            elevation: 4,
+            shadowColor: Colors.black.withValues(alpha: 0.35),
+            color: scheme.surface,
+            shape: const CircleBorder(),
+            child: InkWell(
+              onTap: _openPhotoOptionsSheet,
+              customBorder: const CircleBorder(),
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: scheme.onPrimary.withValues(alpha: 0.9),
+                    width: 2.5,
+                  ),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      scheme.primary,
+                      scheme.primary.withValues(alpha: 0.85),
+                    ],
+                  ),
+                ),
+                child: Icon(
+                  Icons.camera_alt_rounded,
+                  size: 20,
+                  color: scheme.onPrimary,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   void _openEditProfile() {
@@ -299,7 +482,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final movieProv = context.watch<MovieProvider>();
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final muted = scheme.onSurface.withValues(alpha: 0.65);
 
     final displayName = _details.displayNameOr(auth.name ?? 'User');
     final userEmail = auth.email ?? '';
@@ -365,22 +547,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         padding: const EdgeInsets.fromLTRB(20, 26, 20, 22),
                         child: Column(
                           children: [
-                            CircleAvatar(
-                              radius: 52,
-                              backgroundColor: scheme.onPrimary.withValues(
-                                alpha: 0.25,
-                              ),
-                              backgroundImage: hasPhoto
-                                  ? FileImage(File(_photoPath!))
-                                  : null,
-                              child: hasPhoto
-                                  ? null
-                                  : Icon(
-                                      Icons.person_rounded,
-                                      size: 52,
-                                      color: scheme.onPrimary,
-                                    ),
-                            ),
+                            _profileAvatar(scheme, hasPhoto),
                             const SizedBox(height: 14),
                             Text(
                               displayName,
@@ -442,67 +609,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    _roundedCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _sectionHeader(
-                            'Profile photo',
-                            icon: Icons.photo_camera_outlined,
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Saved locally on this device',
-                            style: GoogleFonts.outfit(
-                              fontSize: 12,
-                              color: muted,
-                              height: 1.35,
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: CustomButton(
-                                  text: 'Take Photo',
-                                  onPressed: () => _pickPhoto(fromCamera: true),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: CustomButton(
-                                  text: 'Choose from Gallery',
-                                  isOutlined: true,
-                                  onPressed: () =>
-                                      _pickPhoto(fromCamera: false),
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (hasPhoto) ...[
-                            const SizedBox(height: 10),
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton.icon(
-                                onPressed: _removePhoto,
-                                icon: Icon(
-                                  Icons.delete_outline,
-                                  color: scheme.error,
-                                ),
-                                label: Text(
-                                  'Remove Photo',
-                                  style: GoogleFonts.outfit(
-                                    fontWeight: FontWeight.w700,
-                                    color: scheme.error,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
                     _roundedCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
