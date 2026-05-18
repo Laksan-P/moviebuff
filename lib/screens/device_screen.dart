@@ -1,13 +1,9 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:battery_plus/battery_plus.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/config/app_config.dart';
 import '../providers/connectivity_provider.dart';
@@ -16,7 +12,7 @@ import '../services/api_service.dart';
 import '../services/device_service.dart';
 import '../widgets/custom_button.dart';
 
-enum _LocationDisplayMode { none, realGps, lastKnown, demo }
+enum _LocationDisplayMode { none, realGps, lastKnown }
 
 class DeviceScreen extends StatefulWidget {
   const DeviceScreen({super.key});
@@ -26,8 +22,6 @@ class DeviceScreen extends StatefulWidget {
 }
 
 class _DeviceScreenState extends State<DeviceScreen> {
-  static const _profilePicKey = 'profile_pic_path';
-
   DeviceLocation? _location;
   _LocationDisplayMode _locationMode = _LocationDisplayMode.none;
   String? _locationError;
@@ -39,22 +33,26 @@ class _DeviceScreenState extends State<DeviceScreen> {
   StreamSubscription<BatteryState>? _batterySub;
   Timer? _batteryPoll;
 
-  String? _profilePicPath;
   bool _loadingLocation = false;
 
   bool _testingApi = false;
   String? _apiTestResult;
   bool? _apiTestOk;
 
+  bool? _lastLoggedOnline;
+  int? _lastLoggedFavoriteCount;
+
   @override
   void initState() {
     super.initState();
-    _loadProfilePic();
     _refreshBattery();
-    _batterySub =
-        DeviceService.batteryStateStream().listen((_) => _refreshBattery());
-    _batteryPoll =
-        Timer.periodic(const Duration(seconds: 20), (_) => _refreshBattery());
+    _batterySub = DeviceService.batteryStateStream().listen(
+      (_) => _refreshBattery(),
+    );
+    _batteryPoll = Timer.periodic(
+      const Duration(seconds: 20),
+      (_) => _refreshBattery(),
+    );
   }
 
   @override
@@ -62,14 +60,6 @@ class _DeviceScreenState extends State<DeviceScreen> {
     _batterySub?.cancel();
     _batteryPoll?.cancel();
     super.dispose();
-  }
-
-  Future<void> _loadProfilePic() async {
-    final prefs = await SharedPreferences.getInstance();
-    final path = prefs.getString(_profilePicKey);
-    if (path != null && File(path).existsSync()) {
-      setState(() => _profilePicPath = path);
-    }
   }
 
   Future<void> _refreshBattery() async {
@@ -130,23 +120,13 @@ class _DeviceScreenState extends State<DeviceScreen> {
 
     _applyCoordinates(result.location!, mode: mode);
 
-    final label =
-        mode == _LocationDisplayMode.realGps ? 'Real GPS' : 'Last known';
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$label · nearest cinema: $_nearestTheatre '
-            '(${_nearestKm?.toStringAsFixed(1)} km)'),
-      ),
-    );
-  }
-
-  void _useDemoCinemaLocation() {
-    final loc = DeviceService.demoCinemaLocation();
-    _applyCoordinates(loc, mode: _LocationDisplayMode.demo);
+    final label = mode == _LocationDisplayMode.realGps
+        ? 'Live GPS'
+        : 'Last known';
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Demo location · nearest cinema: $_nearestTheatre '
+          '$label · nearest cinema: $_nearestTheatre '
           '(${_nearestKm?.toStringAsFixed(1)} km)',
         ),
       ),
@@ -156,45 +136,12 @@ class _DeviceScreenState extends State<DeviceScreen> {
   String get _locationStatusLabel {
     switch (_locationMode) {
       case _LocationDisplayMode.realGps:
-        return 'Real GPS location';
+        return 'Source: live GPS';
       case _LocationDisplayMode.lastKnown:
-        return 'Last known location';
-      case _LocationDisplayMode.demo:
-        return 'Demo location used for emulator testing';
+        return 'Source: last known location';
       case _LocationDisplayMode.none:
         return '';
     }
-  }
-
-  Future<void> _capturePhoto({required bool fromCamera}) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final result = fromCamera
-        ? await DeviceService.takePhoto()
-        : await DeviceService.pickFromGallery();
-
-    if (result.cancelled) {
-      messenger.showSnackBar(
-        SnackBar(
-          content:
-              Text(fromCamera ? 'Camera cancelled' : 'Gallery cancelled'),
-        ),
-      );
-      return;
-    }
-
-    if (result.errorMessage != null) {
-      messenger.showSnackBar(SnackBar(content: Text(result.errorMessage!)));
-      return;
-    }
-
-    if (result.path == null) return;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_profilePicKey, result.path!);
-    if (!mounted) return;
-    setState(() => _profilePicPath = result.path);
-    messenger.showSnackBar(
-      const SnackBar(content: Text('Profile photo saved')),
-    );
   }
 
   Future<void> _testApi() async {
@@ -223,27 +170,15 @@ class _DeviceScreenState extends State<DeviceScreen> {
   }
 
   String _deviceNetworkTitle(ConnectivityProvider conn) {
-    if (!conn.isOnline) return 'Device Network: Offline';
-    if (conn.status.contains(ConnectivityResult.wifi)) {
-      return 'Device Network: Online via Wi-Fi';
-    }
-    if (conn.status.contains(ConnectivityResult.mobile)) {
-      return 'Device Network: Online via Mobile data';
-    }
-    if (conn.status.contains(ConnectivityResult.ethernet)) {
-      return 'Device Network: Online via Ethernet';
-    }
-    if (conn.status.contains(ConnectivityResult.vpn)) {
-      return 'Device Network: Online via VPN';
-    }
-    return 'Device Network: Offline';
+    if (!conn.isOnline) return 'Offline Mode';
+    return 'Online';
   }
 
   String _deviceNetworkSubtitle(ConnectivityProvider conn) {
     if (conn.isOnline) {
-      return 'Whether this device has an active Wi‑Fi or cellular data path.';
+      return 'Live movie catalogue, SSP login, and booking updates are available.';
     }
-    return 'No Wi‑Fi or cellular data path detected on this device.';
+    return 'Showing cached movies, favourites, and local bookings from this device.';
   }
 
   String _sspApiTitle() {
@@ -252,12 +187,12 @@ class _DeviceScreenState extends State<DeviceScreen> {
     return 'SSP API: Unreachable';
   }
 
-  String _batteryStateLabel(BatteryState s) {
+  String _batteryStateSubtitle(BatteryState s) {
     switch (s) {
       case BatteryState.charging:
         return 'Charging';
       case BatteryState.discharging:
-        return 'Discharging';
+        return 'Not charging';
       case BatteryState.full:
         return 'Full';
       case BatteryState.connectedNotCharging:
@@ -271,8 +206,21 @@ class _DeviceScreenState extends State<DeviceScreen> {
   Widget build(BuildContext context) {
     final conn = context.watch<ConnectivityProvider>();
     final movieProv = context.watch<MovieProvider>();
-    final muted = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7);
+    final muted = Theme.of(
+      context,
+    ).colorScheme.onSurface.withValues(alpha: 0.7);
     final showAdbNote = !conn.isOnline && _apiTestOk == true;
+
+    if (_lastLoggedOnline != conn.isOnline) {
+      _lastLoggedOnline = conn.isOnline;
+      debugPrint('📡 DEVICE NETWORK - ${conn.isOnline ? 'Online' : 'Offline'}');
+    }
+    if (_lastLoggedFavoriteCount != movieProv.favorites.length) {
+      _lastLoggedFavoriteCount = movieProv.favorites.length;
+      debugPrint(
+        '⭐ SQFLITE FAVORITES - loaded ${movieProv.favorites.length} favourites',
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -287,7 +235,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
       body: SafeArea(
         top: false,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 96),
           children: [
             _sectionTitle('Network'),
             _card(
@@ -308,12 +256,12 @@ class _DeviceScreenState extends State<DeviceScreen> {
               iconColor: _apiTestOk == null
                   ? Theme.of(context).colorScheme.primary
                   : (_apiTestOk!
-                      ? const Color(0xFF10B981)
-                      : Theme.of(context).colorScheme.error),
+                        ? const Color(0xFF10B981)
+                        : Theme.of(context).colorScheme.error),
               title: _sspApiTitle(),
               subtitle: _apiTestResult == null
                   ? 'Base: ${AppConfig.apiBaseUrl} · timeout '
-                      '${AppConfig.httpTimeout.inSeconds}s · tap to test.'
+                        '${AppConfig.httpTimeout.inSeconds}s · tap to test.'
                   : _apiTestResult!,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -332,7 +280,9 @@ class _DeviceScreenState extends State<DeviceScreen> {
                   Padding(
                     padding: const EdgeInsets.only(top: 12),
                     child: CustomButton(
-                      text: _testingApi ? 'Testing…' : 'Test SSP API Connection',
+                      text: _testingApi
+                          ? 'Testing…'
+                          : 'Test SSP API Connection',
                       onPressed: _testingApi ? () {} : _testApi,
                       isLoading: _testingApi,
                     ),
@@ -352,88 +302,100 @@ class _DeviceScreenState extends State<DeviceScreen> {
               iconColor: _battery == null
                   ? Theme.of(context).colorScheme.onSurface
                   : (_battery!.level < 20
-                      ? Theme.of(context).colorScheme.error
-                      : Theme.of(context).colorScheme.primary),
-              title: _battery == null
-                  ? 'Reading battery…'
-                  : '${_battery!.level}%',
+                        ? Theme.of(context).colorScheme.error
+                        : Theme.of(context).colorScheme.primary),
+              title: 'Battery status',
               subtitle: _battery == null
-                  ? '—'
-                  : _batteryStateLabel(_battery!.state),
-            ),
-
-            const SizedBox(height: 20),
-            _sectionTitle('Camera / Gallery Preview'),
-            _card(
-              icon: Icons.camera_alt_outlined,
-              iconColor: Theme.of(context).colorScheme.primary,
-              title: _profilePicPath == null
-                  ? 'No image selected yet'
-                  : p.basename(_profilePicPath!),
-              subtitle: _profilePicPath == null
-                  ? 'Capture or pick an image below.'
-                  : '${_profilePicPath!}\nImage stored in app cache for demo.',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 12),
-                  if (_profilePicPath != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.file(
-                          File(_profilePicPath!),
-                          height: 160,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                        ),
-                      ),
-                    ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: CustomButton(
-                          text: 'Camera',
-                          onPressed: () => _capturePhoto(fromCamera: true),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: CustomButton(
-                          text: 'Gallery',
-                          isOutlined: true,
-                          onPressed: () => _capturePhoto(fromCamera: false),
-                        ),
-                      ),
-                    ],
+                  ? 'Reading battery…'
+                  : '${_battery!.level}% · ${_batteryStateSubtitle(_battery!.state)}',
+              child: Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Text(
+                  'Useful before long movie browsing or booking sessions.',
+                  style: GoogleFonts.outfit(
+                    fontSize: 11,
+                    color: muted,
+                    height: 1.35,
                   ),
-                ],
+                ),
               ),
             ),
 
             const SizedBox(height: 20),
-            _sectionTitle('My Favorites (sqflite)'),
+            _sectionTitle('Camera'),
+            _card(
+              icon: Icons.photo_camera_outlined,
+              iconColor: Theme.of(context).colorScheme.primary,
+              title: 'Camera & photo library',
+              subtitle:
+                  'MovieBuff can use your camera and gallery when you choose '
+                  'a profile photo from the Profile tab.',
+              child: Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Text(
+                  'No photo is stored from this screen — it is a capability '
+                  'overview only.',
+                  style: GoogleFonts.outfit(
+                    fontSize: 11,
+                    color: muted,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+            _sectionTitle('Saved favourites'),
             if (movieProv.favorites.isEmpty)
               _card(
                 icon: Icons.favorite_border,
                 iconColor: Theme.of(context).colorScheme.primary,
-                title: 'No favorites yet',
-                subtitle:
-                    'Open any movie and tap the heart icon to save it to the local sqflite DB.',
-              )
-            else
-              ...movieProv.favorites.map(
-                (m) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: _card(
-                    icon: Icons.favorite,
-                    iconColor: Theme.of(context).colorScheme.error,
-                    title: m['title']?.toString() ?? '',
-                    subtitle: m['genre']?.toString() ?? '',
+                title: 'No favourites yet',
+                subtitle: 'Tap the heart icon on any movie to save it locally.',
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: Text(
+                    'Stored using sqflite for offline access.',
+                    style: GoogleFonts.outfit(
+                      fontSize: 11,
+                      color: muted,
+                      height: 1.35,
+                    ),
                   ),
                 ),
+              )
+            else
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4, bottom: 8),
+                    child: Text(
+                      'Stored using sqflite for offline access.',
+                      style: GoogleFonts.outfit(
+                        fontSize: 11,
+                        color: muted,
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                  ...movieProv.favorites.map(
+                    (m) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _card(
+                        icon: Icons.favorite,
+                        iconColor: Theme.of(context).colorScheme.error,
+                        title: m['title']?.toString() ?? '',
+                        subtitle: () {
+                          final g = m['genre']?.toString().trim();
+                          return (g != null && g.isNotEmpty)
+                              ? g
+                              : 'Genre not listed';
+                        }(),
+                      ),
+                    ),
+                  ),
+                ],
               ),
           ],
         ),
@@ -448,56 +410,73 @@ class _DeviceScreenState extends State<DeviceScreen> {
         ? Theme.of(context).colorScheme.error
         : Theme.of(context).colorScheme.primary;
 
-    final body = <Widget>[];
+    List<Widget> headerContent;
     if (hasCoords) {
-      body.addAll([
+      headerContent = [
         Text(
-          _locationStatusLabel,
+          'Nearest cinema: ${_nearestTheatre ?? '—'}',
           style: GoogleFonts.outfit(
-            fontWeight: FontWeight.w800,
-            fontSize: 13,
-            color: Theme.of(context).colorScheme.primary,
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            height: 1.3,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         Text(
-          'Latitude: ${loc.latitude.toStringAsFixed(6)}',
-          style: GoogleFonts.outfit(fontSize: 13),
+          'Distance: ${_nearestKm?.toStringAsFixed(1) ?? '—'} km',
+          style: GoogleFonts.outfit(fontSize: 13, height: 1.35),
         ),
-        Text(
-          'Longitude: ${loc.longitude.toStringAsFixed(6)}',
-          style: GoogleFonts.outfit(fontSize: 13),
+        const SizedBox(height: 4),
+        SelectableText(
+          'Lat/Lng: ${loc.latitude.toStringAsFixed(6)}, ${loc.longitude.toStringAsFixed(6)}',
+          style: GoogleFonts.outfit(fontSize: 13, height: 1.35),
         ),
-        if (_nearestTheatre != null && _nearestKm != null) ...[
-          const SizedBox(height: 6),
+        if (_locationStatusLabel.isNotEmpty) ...[
+          const SizedBox(height: 8),
           Text(
-            'Nearest cinema: $_nearestTheatre '
-            '(${_nearestKm!.toStringAsFixed(2)} km)',
+            _locationStatusLabel,
             style: GoogleFonts.outfit(
-              fontSize: 13,
+              fontSize: 11,
+              color: Theme.of(context).colorScheme.primary,
               fontWeight: FontWeight.w600,
             ),
           ),
         ],
-      ]);
+      ];
     } else if (_locationError != null) {
-      body.add(
+      headerContent = [
+        Text(
+          'Find nearest cinema',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15),
+        ),
+        const SizedBox(height: 6),
         Text(
           _locationError!,
           style: GoogleFonts.outfit(
             fontSize: 12,
             color: Theme.of(context).colorScheme.error,
+            height: 1.35,
           ),
         ),
-      );
+      ];
     } else {
-      body.add(
+      headerContent = [
         Text(
-          'Use the buttons below for live GPS or a demo cinema location '
-          'near Colombo, Sri Lanka.',
-          style: GoogleFonts.outfit(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
+          'Find nearest cinema',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15),
         ),
-      );
+        const SizedBox(height: 6),
+        Text(
+          'Use your location to suggest the closest MovieBuff theatre.',
+          style: GoogleFonts.outfit(
+            fontSize: 12,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.7),
+            height: 1.35,
+          ),
+        ),
+      ];
     }
 
     return Container(
@@ -505,9 +484,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outlineVariant,
-        ),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -527,22 +504,16 @@ class _DeviceScreenState extends State<DeviceScreen> {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: body,
+                  children: headerContent,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
           CustomButton(
-            text: _loadingLocation ? 'Locating…' : 'Refresh real location',
+            text: _loadingLocation ? 'Locating…' : 'Find nearest cinema',
             onPressed: _loadingLocation ? () {} : _refreshRealLocation,
             isLoading: _loadingLocation,
-          ),
-          const SizedBox(height: 10),
-          CustomButton(
-            text: 'Use demo cinema location',
-            isOutlined: true,
-            onPressed: _loadingLocation ? () {} : _useDemoCinemaLocation,
           ),
         ],
       ),
@@ -550,17 +521,16 @@ class _DeviceScreenState extends State<DeviceScreen> {
   }
 
   Widget _sectionTitle(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 8, left: 4),
-        child: Text(
-          text,
-          style: GoogleFonts.outfit(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-          ),
-        ),
-      );
+    padding: const EdgeInsets.only(bottom: 8, left: 4),
+    child: Text(
+      text,
+      style: GoogleFonts.outfit(
+        fontSize: 14,
+        fontWeight: FontWeight.w700,
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+      ),
+    ),
+  );
 
   Widget _card({
     required IconData icon,
@@ -574,14 +544,13 @@ class _DeviceScreenState extends State<DeviceScreen> {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outlineVariant,
-        ),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 padding: const EdgeInsets.all(10),
@@ -601,18 +570,21 @@ class _DeviceScreenState extends State<DeviceScreen> {
                       style: GoogleFonts.outfit(
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
+                        height: 1.25,
                       ),
+                      softWrap: true,
                     ),
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
                       style: GoogleFonts.outfit(
                         fontSize: 12,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.7),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.7),
+                        height: 1.35,
                       ),
+                      softWrap: true,
                     ),
                   ],
                 ),

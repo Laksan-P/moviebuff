@@ -212,7 +212,7 @@ class DeviceService {
     }
 
     debugPrint(
-      '📍 NEAREST CINEMA CALCULATED: $nearestName, '
+      '📍 DEVICE LOCATION - nearest cinema: $nearestName, '
       '${nearestKm.toStringAsFixed(2)} km',
     );
     return (name: nearestName, distanceKm: nearestKm);
@@ -296,7 +296,7 @@ class DeviceService {
   static Future<BatteryInfo> getBattery() async {
     final level = await _battery.batteryLevel;
     final state = await _battery.batteryState;
-    debugPrint('🔋 BATTERY - $level% ($state)');
+    debugPrint('🔋 DEVICE BATTERY - $level% $state');
     return BatteryInfo(level: level, state: state);
   }
 
