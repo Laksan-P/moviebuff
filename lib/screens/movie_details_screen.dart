@@ -28,6 +28,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
   List<Map<String, dynamic>> allShowtimes = [];
   bool _isloadingShowtimes = true;
   int? _lastScheduledMoviesToken;
+  MovieProvider? _movieProviderForListener;
 
   /// Normalized customer movie (posterUrl → image, etc.).
   late Map<String, dynamic> _movie;
@@ -40,6 +41,17 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
     _loadShowtimes();
   }
 
+  void _onMovieProviderChanged() {
+    if (!mounted) return;
+    final prov = _movieProviderForListener;
+    if (prov == null) return;
+    if (prov.awaitingCatalogueUi) {
+      _lastScheduledMoviesToken = null;
+      return;
+    }
+    _maybeScheduleShowtimes(prov);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -47,8 +59,18 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
     _initializeSelectedDate();
     debugPrint('🎬 MOVIE DETAILS - Received Movie Data: $_movie');
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _maybeScheduleShowtimes(context.read<MovieProvider>());
+      if (!mounted) return;
+      final p = context.read<MovieProvider>();
+      _movieProviderForListener = p;
+      p.addListener(_onMovieProviderChanged);
+      _onMovieProviderChanged();
     });
+  }
+
+  @override
+  void dispose() {
+    _movieProviderForListener?.removeListener(_onMovieProviderChanged);
+    super.dispose();
   }
 
   void _initializeSelectedDate() {
@@ -217,7 +239,6 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
     final mp = context.watch<MovieProvider>();
 
     if (mp.awaitingCatalogueUi) {
-      _lastScheduledMoviesToken = null;
       return Scaffold(
         backgroundColor: Theme.of(context).colorScheme.surface,
         appBar: AppBar(
@@ -240,10 +261,6 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
         ),
       );
     }
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _maybeScheduleShowtimes(mp);
-    });
 
     final cast = [
       {'name': 'Actor 1', 'role': 'Role 1'},

@@ -21,6 +21,7 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
   List<Map<String, dynamic>> _movies = [];
   bool _isLoading = true;
   int? _lastScheduledMoviesToken;
+  MovieProvider? _movieProviderForListener;
 
   void _maybeScheduleLoad(MovieProvider prov) {
     if (!mounted || prov.awaitingCatalogueUi) return;
@@ -30,12 +31,33 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
     _loadMovies();
   }
 
+  void _onMovieProviderChanged() {
+    if (!mounted) return;
+    final prov = _movieProviderForListener;
+    if (prov == null) return;
+    if (prov.awaitingCatalogueUi) {
+      _lastScheduledMoviesToken = null;
+      return;
+    }
+    _maybeScheduleLoad(prov);
+  }
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _maybeScheduleLoad(context.read<MovieProvider>());
+      if (!mounted) return;
+      final p = context.read<MovieProvider>();
+      _movieProviderForListener = p;
+      p.addListener(_onMovieProviderChanged);
+      _onMovieProviderChanged();
     });
+  }
+
+  @override
+  void dispose() {
+    _movieProviderForListener?.removeListener(_onMovieProviderChanged);
+    super.dispose();
   }
 
   Future<void> _loadMovies() async {
@@ -109,7 +131,6 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
     final prov = context.watch<MovieProvider>();
 
     if (prov.awaitingCatalogueUi) {
-      _lastScheduledMoviesToken = null;
       return Scaffold(
         appBar: AppBar(
           title: Text(
@@ -132,10 +153,6 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
         ),
       );
     }
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _maybeScheduleLoad(prov);
-    });
 
     return Scaffold(
       appBar: AppBar(

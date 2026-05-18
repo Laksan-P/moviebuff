@@ -132,8 +132,8 @@ class ApiService {
     const tag = 'API LOGIN';
     final uri = Uri.parse('${AppConfig.apiBaseUrl}/login');
     final body = <String, dynamic>{
-      'email': email.trim(),
-      'password': password.trim(),
+      'email': email,
+      'password': password,
       'device_name': 'moviebuff-android',
     };
     _logRequest(tag, 'POST', uri, body, AppConfig.httpTimeout);
@@ -198,10 +198,10 @@ class ApiService {
     const tag = 'API REGISTER';
     final uri = Uri.parse('${AppConfig.apiBaseUrl}/register');
     final body = <String, dynamic>{
-      'name': name.trim(),
-      'email': email.trim(),
-      'password': password.trim(),
-      'password_confirmation': password.trim(),
+      'name': name,
+      'email': email,
+      'password': password,
+      'password_confirmation': password,
       'device_name': 'moviebuff-android',
     };
     _logRequest(tag, 'POST', uri, body, AppConfig.httpTimeout);

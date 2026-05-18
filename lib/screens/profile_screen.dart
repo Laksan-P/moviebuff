@@ -1,9 +1,11 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../core/validation/form_validators.dart';
 import '../providers/auth_provider.dart';
 import '../providers/movie_provider.dart';
 import '../providers/theme_provider.dart';
@@ -25,32 +27,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String? _photoPath;
   ProfileDetails _details = const ProfileDetails();
   int _bookingCount = 0;
-  String? _loadedForEmail;
+  AuthProvider? _authForListener;
 
   @override
   void initState() {
     super.initState();
-    _loadPhotoPath();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _attachAuthListener());
+  }
+
+  void _attachAuthListener() {
+    if (!mounted) return;
+    final auth = context.read<AuthProvider>();
+    _authForListener ??= auth..addListener(_onAuthSessionChanged);
+    _scheduleProfileReload();
+  }
+
+  void _onAuthSessionChanged() {
+    _scheduleProfileReload();
+  }
+
+  void _scheduleProfileReload() {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await _reloadProfile();
+    });
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final e = context.read<AuthProvider>().email;
-    if (e != _loadedForEmail) {
-      _loadedForEmail = e;
-      _reloadProfile();
-    }
-  }
-
-  Future<void> _loadPhotoPath() async {
-    final path = await ProfilePhotoService.getValidPath();
-    if (mounted) setState(() => _photoPath = path);
+  void dispose() {
+    _authForListener?.removeListener(_onAuthSessionChanged);
+    super.dispose();
   }
 
   Future<void> _reloadProfile() async {
     final auth = context.read<AuthProvider>();
+    final logEmail = (auth.email?.trim().isEmpty ?? true)
+        ? '(no email)'
+        : auth.email!.trim();
+    debugPrint('👤 PROFILE - Loading data for $logEmail');
+
     final details = await ProfileDetailsService.load(auth.email);
+    final path = await ProfilePhotoService.getValidPath(auth.email);
     var bookings = 0;
     final mail = auth.email?.trim() ?? '';
     if (mail.isNotEmpty) {
@@ -64,6 +81,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() {
         _details = details;
         _bookingCount = bookings;
+        _photoPath = path;
       });
     }
   }
@@ -75,6 +93,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _pickPhoto({required bool fromCamera}) async {
     final messenger = ScaffoldMessenger.of(context);
+    final email = context.read<AuthProvider>().email;
     final result = fromCamera
         ? await DeviceService.takePhoto()
         : await DeviceService.pickFromGallery();
@@ -96,7 +115,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     if (result.path == null) return;
-    await ProfilePhotoService.savePath(result.path!);
+
+    if (email == null || email.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Sign in to save a profile photo.')),
+      );
+      return;
+    }
+
+    await ProfilePhotoService.savePath(email, result.path!);
     if (!mounted) return;
     setState(() => _photoPath = result.path);
     messenger.showSnackBar(
@@ -107,7 +134,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _removePhoto() async {
-    await ProfilePhotoService.clear();
+    final email = context.read<AuthProvider>().email;
+    if (email == null || email.isEmpty) return;
+    await ProfilePhotoService.clear(email);
     if (!mounted) return;
     setState(() => _photoPath = null);
     if (!mounted) return;
@@ -116,15 +145,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     ).showSnackBar(const SnackBar(content: Text('Profile photo removed.')));
   }
 
-  void _openEditProfile(ThemeData theme, AuthProvider auth) {
-    final nameC = TextEditingController(
-      text: _details.displayNameOr(auth.name ?? 'User'),
-    );
-    final phoneC = TextEditingController(text: _details.phone);
-    final cinemaC = TextEditingController(text: _details.preferredCinema);
-    final genreC = TextEditingController(text: _details.favouriteGenre);
+  void _openEditProfile() {
+    final auth = context.read<AuthProvider>();
+    final theme = Theme.of(context);
+    final initialDisplayName = _details.displayNameOr(auth.name ?? 'User');
 
-    showModalBottomSheet<void>(
+    showModalBottomSheet<ProfileDetails?>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
@@ -133,145 +159,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (sheetCtx) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.viewInsetsOf(sheetCtx).bottom,
-          ),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Edit profile',
-                  style: GoogleFonts.outfit(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Email and role come from your login and cannot be changed here.',
-                  style: GoogleFonts.outfit(
-                    fontSize: 12,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
-                    height: 1.35,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                InputDecorator(
-                  decoration: InputDecoration(
-                    labelText: 'Email (read-only)',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(
-                    auth.email ?? '—',
-                    style: GoogleFonts.outfit(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                InputDecorator(
-                  decoration: InputDecoration(
-                    labelText: 'Role (read-only)',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(
-                    auth.isAdmin ? 'Admin' : 'Customer',
-                    style: GoogleFonts.outfit(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: nameC,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: InputDecoration(
-                    labelText: 'Full name',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: phoneC,
-                  keyboardType: TextInputType.phone,
-                  decoration: InputDecoration(
-                    labelText: 'Phone number',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: cinemaC,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: InputDecoration(
-                    labelText: 'Preferred cinema',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: genreC,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: InputDecoration(
-                    labelText: 'Favourite genre',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                CustomButton(
-                  text: 'Save changes',
-                  onPressed: () async {
-                    final updated = ProfileDetails(
-                      displayNameOverride: nameC.text.trim(),
-                      phone: phoneC.text.trim(),
-                      preferredCinema: cinemaC.text.trim(),
-                      favouriteGenre: genreC.text.trim(),
-                    );
-                    await ProfileDetailsService.save(auth.email, updated);
-                    if (sheetCtx.mounted) Navigator.pop(sheetCtx);
-                    if (!mounted) return;
-                    setState(() => _details = updated);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Profile details saved.')),
-                    );
-                  },
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: () => Navigator.pop(sheetCtx),
-                  child: Text(
-                    'Cancel',
-                    style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
-            ),
-          ),
+        return _EditProfileSheet(
+          theme: theme,
+          readOnlyEmail: auth.email,
+          isAdmin: auth.isAdmin,
+          initialDisplayName: initialDisplayName,
+          initialPhone: _details.phone,
+          initialCinema: _details.preferredCinema,
+          initialGenre: _details.favouriteGenre,
         );
       },
-    ).whenComplete(() {
-      nameC.dispose();
-      phoneC.dispose();
-      cinemaC.dispose();
-      genreC.dispose();
+    ).then((saved) {
+      if (!mounted || saved == null) return;
+      setState(() => _details = saved);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile details saved.')),
+      );
     });
   }
 
@@ -602,7 +505,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                               ),
                               TextButton.icon(
-                                onPressed: () => _openEditProfile(theme, auth),
+                                onPressed: _openEditProfile,
                                 icon: const Icon(Icons.edit_outlined, size: 18),
                                 label: Text(
                                   'Edit',
@@ -793,6 +696,238 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _EditProfileSheet extends StatefulWidget {
+  const _EditProfileSheet({
+    required this.theme,
+    required this.readOnlyEmail,
+    required this.isAdmin,
+    required this.initialDisplayName,
+    required this.initialPhone,
+    required this.initialCinema,
+    required this.initialGenre,
+  });
+
+  final ThemeData theme;
+  final String? readOnlyEmail;
+  final bool isAdmin;
+  final String initialDisplayName;
+  final String initialPhone;
+  final String initialCinema;
+  final String initialGenre;
+
+  @override
+  State<_EditProfileSheet> createState() => _EditProfileSheetState();
+}
+
+class _EditProfileSheetState extends State<_EditProfileSheet> {
+  late final TextEditingController _nameC;
+  late final TextEditingController _phoneC;
+  late final TextEditingController _cinemaC;
+  late final TextEditingController _genreC;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameC = TextEditingController(text: widget.initialDisplayName);
+    _phoneC = TextEditingController(text: widget.initialPhone);
+    _cinemaC = TextEditingController(text: widget.initialCinema);
+    _genreC = TextEditingController(text: widget.initialGenre);
+  }
+
+  @override
+  void dispose() {
+    _nameC.dispose();
+    _phoneC.dispose();
+    _cinemaC.dispose();
+    _genreC.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final messenger = ScaffoldMessenger.of(context);
+
+    final nameErr = FormValidators.name(_nameC.text);
+    if (nameErr != null) {
+      messenger.showSnackBar(SnackBar(content: Text(nameErr)));
+      return;
+    }
+    final phoneErr = FormValidators.phoneOptional(_phoneC.text);
+    if (phoneErr != null) {
+      messenger.showSnackBar(SnackBar(content: Text(phoneErr)));
+      return;
+    }
+    final cinemaErr = FormValidators.preferredCinemaOptional(_cinemaC.text);
+    if (cinemaErr != null) {
+      messenger.showSnackBar(SnackBar(content: Text(cinemaErr)));
+      return;
+    }
+    final genreErr = FormValidators.favouriteGenreOptional(_genreC.text);
+    if (genreErr != null) {
+      messenger.showSnackBar(SnackBar(content: Text(genreErr)));
+      return;
+    }
+
+    final auth = context.read<AuthProvider>();
+    final email = auth.email;
+    if (email == null || email.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Cannot save: missing account email.')),
+      );
+      return;
+    }
+
+    final updated = ProfileDetails(
+      displayNameOverride: _nameC.text.trim(),
+      phone: _phoneC.text.trim(),
+      preferredCinema: _cinemaC.text.trim(),
+      favouriteGenre: _genreC.text.trim(),
+    );
+
+    await ProfileDetailsService.save(email, updated);
+
+    if (!mounted) return;
+    Navigator.pop(context, updated);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = widget.theme;
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.viewInsetsOf(context).bottom,
+      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Edit profile',
+              style: GoogleFonts.outfit(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Email and role come from your login and cannot be changed here.',
+              style: GoogleFonts.outfit(
+                fontSize: 12,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
+                height: 1.35,
+              ),
+            ),
+            const SizedBox(height: 20),
+            InputDecorator(
+              decoration: InputDecoration(
+                labelText: 'Email (read-only)',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                widget.readOnlyEmail ?? '—',
+                style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            InputDecorator(
+              decoration: InputDecoration(
+                labelText: 'Role (read-only)',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                widget.isAdmin ? 'Admin' : 'Customer',
+                style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _nameC,
+              maxLength: 50,
+              textCapitalization: TextCapitalization.words,
+              decoration: InputDecoration(
+                labelText: 'Full name',
+                counterText: '',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _phoneC,
+              keyboardType: TextInputType.phone,
+              maxLength: 10,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(10),
+              ],
+              decoration: InputDecoration(
+                labelText: 'Phone number (optional)',
+                counterText: '',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _cinemaC,
+              maxLength: 60,
+              textCapitalization: TextCapitalization.words,
+              decoration: InputDecoration(
+                labelText: 'Preferred cinema',
+                counterText: '',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _genreC,
+              maxLength: 40,
+              textCapitalization: TextCapitalization.words,
+              decoration: InputDecoration(
+                labelText: 'Favourite genre',
+                counterText: '',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            CustomButton(
+              text: 'Save changes',
+              onPressed: () {
+                _save();
+              },
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../core/validation/form_validators.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_text_field.dart';
 import 'signup_screen.dart';
@@ -57,19 +59,20 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (!ok) return;
 
-    // Refresh external movies now that we're online & authenticated.
-    // ignore: unawaited_futures
-    context.read<MovieProvider>().load(forceRefresh: true);
-
-    if (auth.isAdmin) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
-      );
-    } else {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-      );
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      // ignore: unawaited_futures
+      context.read<MovieProvider>().load(forceRefresh: true);
+      if (auth.isAdmin) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+        );
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+      }
+    });
   }
 
   @override
@@ -247,10 +250,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           hint: 'you@example.com',
                           keyboardType: TextInputType.emailAddress,
                           controller: _emailController,
-                          validator: (value) =>
-                              value == null || !value.contains('@')
-                              ? 'Enter a valid email'
-                              : null,
+                          maxLength: 100,
+                          inputFormatters: [
+                            LengthLimitingTextInputFormatter(100),
+                          ],
+                          validator: FormValidators.loginEmail,
                         ),
                         const SizedBox(height: 20),
                         CustomTextField(
@@ -258,10 +262,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           hint: '••••••••',
                           isPassword: true,
                           controller: _passwordController,
-                          validator: (value) =>
-                              value == null || value.length < 6
-                              ? 'Password too short'
-                              : null,
+                          maxLength: 64,
+                          inputFormatters: [
+                            LengthLimitingTextInputFormatter(64),
+                          ],
+                          validator: FormValidators.loginPassword,
                         ),
                         const SizedBox(height: 24),
 

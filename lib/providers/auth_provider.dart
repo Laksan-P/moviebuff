@@ -87,10 +87,8 @@ class AuthProvider extends ChangeNotifier {
       return true;
     }
 
-    _lastMessage =
-        apiResult.error == null
-            ? 'Invalid email or password'
-            : 'Login failed: ${apiResult.error}';
+    // Same user-facing message for wrong credentials (do not leak details).
+    _lastMessage = 'Invalid email or password.';
     return false;
   }
 

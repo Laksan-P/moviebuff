@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../core/validation/form_validators.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_text_field.dart';
 import 'login_screen.dart';
@@ -73,19 +75,21 @@ class _SignupScreenState extends State<SignupScreen> {
     );
 
     if (!mounted) return;
-    // ignore: unawaited_futures
-    context.read<MovieProvider>().load(forceRefresh: true);
 
-    if (!mounted) return;
-    if (auth.isAdmin) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
-      );
-    } else {
-      Navigator.of(
-        context,
-      ).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      // ignore: unawaited_futures
+      context.read<MovieProvider>().load(forceRefresh: true);
+      if (auth.isAdmin) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+        );
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+      }
+    });
   }
 
   @override
@@ -263,8 +267,11 @@ class _SignupScreenState extends State<SignupScreen> {
                             label: 'Full Name',
                             hint: 'Enter your full name',
                             controller: _nameController,
-                            validator: (value) =>
-                                value!.isEmpty ? 'Name required' : null,
+                            maxLength: 50,
+                            inputFormatters: [
+                              LengthLimitingTextInputFormatter(50),
+                            ],
+                            validator: FormValidators.name,
                           ),
                           const SizedBox(height: 20),
                           CustomTextField(
@@ -272,29 +279,46 @@ class _SignupScreenState extends State<SignupScreen> {
                             hint: 'you@example.com',
                             keyboardType: TextInputType.emailAddress,
                             controller: _emailController,
-                            validator: (value) =>
-                                !value!.contains('@') ? 'Invalid email' : null,
+                            maxLength: 100,
+                            inputFormatters: [
+                              LengthLimitingTextInputFormatter(100),
+                            ],
+                            validator: FormValidators.registerEmail,
                           ),
                           const SizedBox(height: 20),
                           CustomTextField(
-                            label: 'Phone Number',
-                            hint: 'Your phone number',
+                            label: 'Phone Number (optional)',
+                            hint: '10 digits',
                             keyboardType: TextInputType.phone,
                             controller: _phoneController,
-                            validator: (value) =>
-                                value!.isEmpty ? 'Phone required' : null,
+                            maxLength: 10,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(10),
+                            ],
+                            validator: FormValidators.phoneOptional,
                           ),
                           const SizedBox(height: 20),
                           CustomTextField(
                             label: 'Preferred cinema (optional)',
                             hint: 'e.g. Scope Cinemas Colombo',
                             controller: _preferredCinemaController,
+                            maxLength: 60,
+                            inputFormatters: [
+                              LengthLimitingTextInputFormatter(60),
+                            ],
+                            validator: FormValidators.preferredCinemaOptional,
                           ),
                           const SizedBox(height: 20),
                           CustomTextField(
                             label: 'Favourite genre (optional)',
                             hint: 'e.g. Action, Drama',
                             controller: _favouriteGenreController,
+                            maxLength: 40,
+                            inputFormatters: [
+                              LengthLimitingTextInputFormatter(40),
+                            ],
+                            validator: FormValidators.favouriteGenreOptional,
                           ),
                           const SizedBox(height: 20),
                           CustomTextField(
@@ -302,8 +326,11 @@ class _SignupScreenState extends State<SignupScreen> {
                             hint: 'Create a strong password',
                             isPassword: true,
                             controller: _passwordController,
-                            validator: (value) =>
-                                value!.length < 6 ? 'Too short' : null,
+                            maxLength: 64,
+                            inputFormatters: [
+                              LengthLimitingTextInputFormatter(64),
+                            ],
+                            validator: FormValidators.registerPassword,
                           ),
                           const SizedBox(height: 20),
                           CustomTextField(
@@ -311,10 +338,14 @@ class _SignupScreenState extends State<SignupScreen> {
                             hint: 'Confirm your password',
                             isPassword: true,
                             controller: _confirmPasswordController,
-                            validator: (value) =>
-                                value != _passwordController.text
-                                ? 'Passwords do not match'
-                                : null,
+                            maxLength: 64,
+                            inputFormatters: [
+                              LengthLimitingTextInputFormatter(64),
+                            ],
+                            validator: (value) => FormValidators.confirmPassword(
+                              value,
+                              _passwordController.text,
+                            ),
                           ),
                           const SizedBox(height: 24),
 
@@ -326,7 +357,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                   context,
                                 ).colorScheme.primary,
                                 onChanged: (v) =>
-                                    setState(() => _termsAccepted = v!),
+                                    setState(() => _termsAccepted = v ?? false),
                               ),
                               Expanded(
                                 child: Text(

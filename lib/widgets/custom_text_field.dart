@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class CustomTextField extends StatefulWidget {
@@ -8,6 +9,8 @@ class CustomTextField extends StatefulWidget {
   final TextEditingController? controller;
   final TextInputType keyboardType;
   final String? Function(String?)? validator;
+  final List<TextInputFormatter>? inputFormatters;
+  final int? maxLength;
 
   const CustomTextField({
     super.key,
@@ -17,6 +20,8 @@ class CustomTextField extends StatefulWidget {
     this.controller,
     this.keyboardType = TextInputType.text,
     this.validator,
+    this.inputFormatters,
+    this.maxLength,
   });
 
   @override
@@ -53,8 +58,11 @@ class _CustomTextFieldState extends State<CustomTextField> {
           obscureText: _obscureText,
           keyboardType: widget.keyboardType,
           validator: widget.validator,
+          inputFormatters: widget.inputFormatters,
+          maxLength: widget.maxLength,
           decoration: InputDecoration(
             hintText: widget.hint,
+            counterText: widget.maxLength != null ? '' : null,
             hintStyle: GoogleFonts.outfit(
               color: Theme.of(
                 context,

@@ -41,6 +41,8 @@ class _DeviceScreenState extends State<DeviceScreen> {
 
   bool? _lastLoggedOnline;
   int? _lastLoggedFavoriteCount;
+  ConnectivityProvider? _connectivityForLogListener;
+  MovieProvider? _movieProvForLogListener;
 
   @override
   void initState() {
@@ -53,10 +55,40 @@ class _DeviceScreenState extends State<DeviceScreen> {
       const Duration(seconds: 20),
       (_) => _refreshBattery(),
     );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final c = context.read<ConnectivityProvider>();
+      final m = context.read<MovieProvider>();
+      _connectivityForLogListener = c;
+      _movieProvForLogListener = m;
+      c.addListener(_logNetworkAndFavoritesIfChanged);
+      m.addListener(_logNetworkAndFavoritesIfChanged);
+      _logNetworkAndFavoritesIfChanged();
+    });
+  }
+
+  void _logNetworkAndFavoritesIfChanged() {
+    if (!mounted) return;
+    final conn = context.read<ConnectivityProvider>();
+    final movieProv = context.read<MovieProvider>();
+    if (_lastLoggedOnline != conn.isOnline) {
+      _lastLoggedOnline = conn.isOnline;
+      debugPrint('📡 DEVICE NETWORK - ${conn.isOnline ? 'Online' : 'Offline'}');
+    }
+    if (_lastLoggedFavoriteCount != movieProv.favorites.length) {
+      _lastLoggedFavoriteCount = movieProv.favorites.length;
+      debugPrint(
+        '⭐ SQFLITE FAVORITES - loaded ${movieProv.favorites.length} favourites',
+      );
+    }
   }
 
   @override
   void dispose() {
+    _connectivityForLogListener?.removeListener(
+      _logNetworkAndFavoritesIfChanged,
+    );
+    _movieProvForLogListener?.removeListener(_logNetworkAndFavoritesIfChanged);
     _batterySub?.cancel();
     _batteryPoll?.cancel();
     super.dispose();
@@ -210,17 +242,6 @@ class _DeviceScreenState extends State<DeviceScreen> {
       context,
     ).colorScheme.onSurface.withValues(alpha: 0.7);
     final showAdbNote = !conn.isOnline && _apiTestOk == true;
-
-    if (_lastLoggedOnline != conn.isOnline) {
-      _lastLoggedOnline = conn.isOnline;
-      debugPrint('📡 DEVICE NETWORK - ${conn.isOnline ? 'Online' : 'Offline'}');
-    }
-    if (_lastLoggedFavoriteCount != movieProv.favorites.length) {
-      _lastLoggedFavoriteCount = movieProv.favorites.length;
-      debugPrint(
-        '⭐ SQFLITE FAVORITES - loaded ${movieProv.favorites.length} favourites',
-      );
-    }
 
     return Scaffold(
       appBar: AppBar(

@@ -61,26 +61,28 @@ class ProfileDetailsService {
 
   static Future<ProfileDetails> load(String? email) async {
     final prefs = await SharedPreferences.getInstance();
+    final logEmail = (email?.trim().isEmpty ?? true) ? '(no email)' : email!.trim();
     final raw = prefs.getString(_keyFor(email));
     if (raw == null || raw.isEmpty) {
-      debugPrint('👤 PROFILE - Loaded profile details (empty)');
+      debugPrint('👤 PROFILE - Loaded profile details (empty) for $logEmail');
       return const ProfileDetails();
     }
     try {
       final map = jsonDecode(raw) as Map<String, dynamic>;
       final d = ProfileDetails.fromJson(map);
-      debugPrint('👤 PROFILE - Loaded profile details');
+      debugPrint('👤 PROFILE - Loaded profile details for $logEmail');
       return d;
     } catch (_) {
-      debugPrint('👤 PROFILE - Loaded profile details (parse fallback)');
+      debugPrint('👤 PROFILE - Loaded profile details (parse fallback) for $logEmail');
       return const ProfileDetails();
     }
   }
 
   static Future<void> save(String? email, ProfileDetails details) async {
     final prefs = await SharedPreferences.getInstance();
+    final logEmail = (email?.trim().isEmpty ?? true) ? '(no email)' : email!.trim();
     await prefs.setString(_keyFor(email), jsonEncode(details.toJson()));
-    debugPrint('👤 PROFILE - Saved profile details');
+    debugPrint('👤 PROFILE - Saved profile details for $logEmail');
   }
 
   /// After successful API registration — local extras only.
