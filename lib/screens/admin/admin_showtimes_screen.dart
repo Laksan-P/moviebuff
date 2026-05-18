@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/theme/app_colors.dart';
 import '../../providers/movie_provider.dart';
 import '../../services/admin_catalog_service.dart';
 import '../../services/showtime_service.dart';
 import '../../utils/movie_catalog_utils.dart';
+import '../../widgets/premium_screen_stack.dart';
 
 class _AdminShowtimePack {
   const _AdminShowtimePack({
@@ -583,8 +585,22 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.secondaryContainer,
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outlineVariant,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(
+              alpha: Theme.of(context).brightness == Brightness.dark
+                  ? 0.25
+                  : 0.05,
+            ),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -605,7 +621,8 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                         style: GoogleFonts.outfit(
                           fontSize: 17,
                           fontWeight: FontWeight.bold,
-                          color: Theme.of(context).brightness == Brightness.light
+                          color:
+                              Theme.of(context).brightness == Brightness.light
                               ? const Color(0xFF6482AD)
                               : Theme.of(context).colorScheme.primary,
                         ),
@@ -624,21 +641,25 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF15803D),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    'ACTIVE',
-                    style: GoogleFonts.outfit(
-                      color: Colors.white,
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold,
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.success,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      'ACTIVE',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.outfit(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
@@ -745,15 +766,18 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.surface,
+        backgroundColor: scheme.surface.withValues(alpha: 0.82),
         elevation: 0,
+        foregroundColor: scheme.onSurface,
         leading: IconButton(
           icon: Icon(
-            Icons.arrow_back,
-            color: Theme.of(context).colorScheme.primary,
+            Icons.arrow_back_rounded,
+            color: scheme.primary,
           ),
           onPressed: () => Navigator.pop(context),
         ),
@@ -762,7 +786,7 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
           child: Text(
             'Back to Dashboard',
             style: GoogleFonts.outfit(
-              color: Theme.of(context).colorScheme.primary,
+              color: scheme.primary,
               fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
@@ -777,76 +801,78 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
               final pack = await _loadPack(prov);
               if (mounted) _showShowtimeDialog(pack);
             },
-            backgroundColor: Theme.of(context).colorScheme.primary,
+            backgroundColor: scheme.primary,
             child: Icon(
               Icons.add,
-              color: Theme.of(context).colorScheme.onPrimary,
+              color: scheme.onPrimary,
             ),
           );
         },
       ),
-      body: Consumer<MovieProvider>(
-        builder: (context, prov, _) {
-          return FutureBuilder<_AdminShowtimePack>(
-            future: _loadPack(prov),
-            builder: (context, snap) {
-              if (!snap.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final pack = snap.data!;
-              return RefreshIndicator(
-                onRefresh: () async {
-                  await prov.load(forceRefresh: true);
-                  if (mounted) setState(() {});
-                },
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 100),
-                  children: [
-                    Text(
-                      'Showtime Management',
-                      style: GoogleFonts.outfit(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        height: 1.1,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      body: PremiumScreenStack(
+        child: Consumer<MovieProvider>(
+          builder: (context, prov, _) {
+            return FutureBuilder<_AdminShowtimePack>(
+              future: _loadPack(prov),
+              builder: (context, snap) {
+                if (!snap.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final pack = snap.data!;
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    await prov.load(forceRefresh: true);
+                    if (mounted) setState(() {});
+                  },
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 100),
+                    children: [
+                      Text(
+                        'Showtime Management',
+                        style: GoogleFonts.outfit(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          height: 1.1,
+                          color: scheme.onSurface,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Schedules synced with the active movie catalogue.',
-                      style: GoogleFonts.outfit(
-                        fontSize: 14,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      const SizedBox(height: 8),
+                      Text(
+                        'Schedules synced with the active movie catalogue.',
+                        style: GoogleFonts.outfit(
+                          fontSize: 14,
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    if (pack.showtimes.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 48),
-                        child: Center(
-                          child: Text(
-                            'No showtimes in this view',
-                            style: GoogleFonts.outfit(
-                              fontSize: 16,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurfaceVariant,
+                      const SizedBox(height: 24),
+                      if (pack.showtimes.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 48),
+                          child: Center(
+                            child: Text(
+                              'No showtimes in this view',
+                              style: GoogleFonts.outfit(
+                                fontSize: 16,
+                                color: scheme.onSurfaceVariant,
+                              ),
                             ),
                           ),
+                        )
+                      else
+                        ...pack.showtimes.map(
+                          (st) => Padding(
+                            padding: const EdgeInsets.only(bottom: 14),
+                            child: _card(st, pack),
+                          ),
                         ),
-                      )
-                    else
-                      ...pack.showtimes.map(
-                        (st) => Padding(
-                          padding: const EdgeInsets.only(bottom: 14),
-                          child: _card(st, pack),
-                        ),
-                      ),
-                  ],
-                ),
-              );
-            },
-          );
-        },
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }

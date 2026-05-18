@@ -31,6 +31,8 @@ class CustomTextField extends StatefulWidget {
 class _CustomTextFieldState extends State<CustomTextField> {
   late bool _obscureText;
 
+  static const double _radius = 14;
+
   @override
   void initState() {
     super.initState();
@@ -39,17 +41,17 @@ class _CustomTextFieldState extends State<CustomTextField> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           widget.label,
           style: GoogleFonts.outfit(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: Theme.of(
-              context,
-            ).colorScheme.onSurface.withValues(alpha: 0.8),
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.15,
+            color: scheme.onSurface.withValues(alpha: 0.72),
           ),
         ),
         const SizedBox(height: 8),
@@ -60,52 +62,60 @@ class _CustomTextFieldState extends State<CustomTextField> {
           validator: widget.validator,
           inputFormatters: widget.inputFormatters,
           maxLength: widget.maxLength,
+          style: GoogleFonts.outfit(
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+            color: scheme.onSurface,
+          ),
           decoration: InputDecoration(
             hintText: widget.hint,
             counterText: widget.maxLength != null ? '' : null,
             hintStyle: GoogleFonts.outfit(
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.4),
+              color: scheme.onSurface.withValues(alpha: 0.38),
+              fontSize: 15,
             ),
             filled: true,
-            fillColor: Theme.of(context).colorScheme.surface,
+            fillColor: scheme.surface.withValues(
+              alpha: Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.65,
+            ),
             contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
+              horizontal: 18,
+              vertical: 16,
             ),
             suffixIcon: widget.isPassword
                 ? IconButton(
                     icon: Icon(
-                      _obscureText ? Icons.visibility_off : Icons.visibility,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.4),
+                      _obscureText
+                          ? Icons.visibility_rounded
+                          : Icons.visibility_off_rounded,
+                      color: scheme.onSurface.withValues(alpha: 0.45),
+                      size: 22,
                     ),
                     onPressed: () {
-                      setState(() {
-                        _obscureText = !_obscureText;
-                      });
+                      setState(() => _obscureText = !_obscureText);
                     },
                   )
                 : null,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(_radius),
               borderSide: BorderSide(
-                color: Theme.of(context).colorScheme.outlineVariant,
+                color: scheme.outline.withValues(alpha: 0.35),
               ),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(_radius),
               borderSide: BorderSide(
-                color: Theme.of(context).colorScheme.outlineVariant,
+                color: scheme.outline.withValues(alpha: 0.35),
               ),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(_radius),
+              borderSide: BorderSide(color: scheme.primary, width: 2),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(_radius),
               borderSide: BorderSide(
-                color: Theme.of(context).colorScheme.primary,
-                width: 2,
+                color: scheme.error.withValues(alpha: 0.85),
               ),
             ),
           ),

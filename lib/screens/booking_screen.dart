@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/theme/app_colors.dart';
+import '../widgets/premium_screen_stack.dart';
 import 'payment_screen.dart';
 import '../services/booking_service.dart';
 
@@ -85,127 +86,168 @@ class _BookingScreenState extends State<BookingScreen> {
     double subtotal = _selectedSeats.length * _pricePerSeat;
     double total = subtotal + _bookingFee;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final dividerSoft = scheme.onPrimaryContainer.withValues(alpha: 0.22);
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        foregroundColor: Theme.of(context).colorScheme.onSurface,
+        backgroundColor: scheme.surface.withValues(alpha: 0.82),
+        foregroundColor: scheme.onSurface,
         elevation: 0,
         title: Text(
           widget.movieTitle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
         ),
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
+      body: PremiumScreenStack(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.only(bottom: 20 + bottomInset),
+          child: Column(
+            children: [
             // Screen Visual and Legend Section
-            Container(
-              margin: const EdgeInsets.all(16),
-              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Column(
-                children: [
-                  // Screen Visual
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 32),
-                    child: Column(
-                      children: [
-                        Container(
-                          height: 4,
-                          width: 200,
-                          decoration: BoxDecoration(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onPrimaryContainer
-                                .withValues(alpha: 0.3),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'SCREEN',
-                          style: GoogleFonts.outfit(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onPrimaryContainer
-                                .withValues(alpha: 0.5),
-                            letterSpacing: 2,
-                            fontSize: 10,
-                          ),
-                        ),
-                      ],
-                    ),
+            LayoutBuilder(
+              builder: (context, seatConstraints) {
+                final narrowSeatArea = seatConstraints.maxWidth < 340;
+                final seatGap = narrowSeatArea ? 4.0 : 8.0;
+                return Container(
+                  margin: const EdgeInsets.all(16),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(24),
                   ),
-
-                  // Seat Grid
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: _cols,
-                      childAspectRatio: 1,
-                      crossAxisSpacing: 8,
-                      mainAxisSpacing: 8,
-                    ),
-                    itemCount: _rows.length * _cols,
-                    itemBuilder: (context, index) {
-                      int rowIdx = index ~/ _cols;
-                      int colIdx = index % _cols;
-                      String seatId = '${_rows[rowIdx]}${colIdx + 1}';
-
-                      bool isBooked = _bookedSeats.contains(seatId);
-                      bool isSelected = _selectedSeats.contains(seatId);
-
-                      return GestureDetector(
-                        onTap: () => _toggleSeat(seatId),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: isBooked
-                                ? (isDark
-                                      ? AppColors.seatBookedDark
-                                      : AppColors.seatBooked)
-                                : isSelected
-                                ? (isDark
-                                      ? AppColors.seatSelectedDark
-                                      : AppColors.seatSelected)
-                                : (isDark
-                                      ? AppColors.seatAvailableDark
-                                      : AppColors.seatAvailable),
-                            border: Border.all(
-                              color: isDark
-                                  ? AppColors.seatBorderDark
-                                  : AppColors.seatBorder,
-                            ),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Center(
-                            child: Text(
-                              seatId,
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: isBooked
-                                    ? (isDark ? Colors.white38 : Colors.black38)
-                                    : isSelected
-                                    ? (isDark ? Colors.black : Colors.white)
-                                    : (isDark
-                                          ? Colors.white70
-                                          : Colors.black87),
-                                fontWeight: FontWeight.bold,
+                  child: Column(
+                    children: [
+                      // Screen Visual
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 32),
+                        child: Column(
+                          children: [
+                            FractionallySizedBox(
+                              widthFactor: 0.55,
+                              child: Container(
+                                height: 4,
+                                constraints: const BoxConstraints(maxWidth: 200),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onPrimaryContainer
+                                      .withValues(alpha: 0.3),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
                               ),
                             ),
-                          ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'SCREEN',
+                              style: GoogleFonts.outfit(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onPrimaryContainer
+                                    .withValues(alpha: 0.5),
+                                letterSpacing: 2,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ],
                         ),
-                      );
-                    },
-                  ),
+                      ),
+
+                      // Seat Grid
+                      GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate:
+                            SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: _cols,
+                          childAspectRatio: narrowSeatArea ? 0.92 : 1,
+                          crossAxisSpacing: seatGap,
+                          mainAxisSpacing: seatGap,
+                        ),
+                        itemCount: _rows.length * _cols,
+                        itemBuilder: (context, index) {
+                          int rowIdx = index ~/ _cols;
+                          int colIdx = index % _cols;
+                          String seatId = '${_rows[rowIdx]}${colIdx + 1}';
+
+                          bool isBooked = _bookedSeats.contains(seatId);
+                          bool isSelected = _selectedSeats.contains(seatId);
+
+                          return GestureDetector(
+                            onTap: () => _toggleSeat(seatId),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              curve: Curves.easeOutCubic,
+                              decoration: BoxDecoration(
+                                color: isBooked
+                                    ? (isDark
+                                          ? AppColors.seatBookedDark
+                                          : AppColors.seatBooked)
+                                    : isSelected
+                                    ? (isDark
+                                          ? AppColors.seatSelectedDark
+                                          : AppColors.seatSelected)
+                                    : (isDark
+                                          ? AppColors.seatAvailableDark
+                                          : AppColors.seatAvailable),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? (isDark
+                                            ? AppColors.cinemaGold
+                                            : scheme.primary)
+                                      : (isDark
+                                            ? AppColors.seatBorderDark
+                                            : AppColors.seatBorder),
+                                  width: isSelected ? 2 : 1,
+                                ),
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: isSelected
+                                    ? [
+                                        BoxShadow(
+                                          color: (isDark
+                                                  ? AppColors.cinemaGold
+                                                  : scheme.primary)
+                                              .withValues(alpha: 0.35),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                              child: Center(
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    seatId,
+                                    maxLines: 1,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: isBooked
+                                          ? (isDark
+                                                ? Colors.white38
+                                                : Colors.black38)
+                                          : isSelected
+                                          ? (isDark ? Colors.black : Colors.white)
+                                          : (isDark
+                                                ? Colors.white70
+                                                : Colors.black87),
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
 
                   const SizedBox(height: 32),
-                  const Divider(color: Colors.white24),
+                  Divider(color: dividerSoft),
                   const SizedBox(height: 16),
 
                   // Legend (wraps on narrow screens)
@@ -241,6 +283,8 @@ class _BookingScreenState extends State<BookingScreen> {
                   ),
                 ],
               ),
+            );
+              },
             ),
 
             // Booking Summary Card
@@ -254,148 +298,172 @@ class _BookingScreenState extends State<BookingScreen> {
                       : AppColors.bookingSummaryBackground,
                   borderRadius: BorderRadius.circular(24),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Booking Summary',
-                      style: GoogleFonts.outfit(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    Row(
+                child: LayoutBuilder(
+                  builder: (context, summaryConstraints) {
+                    final stackSummary = summaryConstraints.maxWidth < 420;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: _summaryInfo(
+                        Text(
+                          'Booking Summary',
+                          style: GoogleFonts.outfit(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        if (stackSummary) ...[
+                          _summaryInfo(
                             'SEATS',
                             _selectedSeats.join(', '),
                           ),
-                        ),
-                        Expanded(
-                          child: _summaryInfo(
+                          const SizedBox(height: 16),
+                          _summaryInfo(
                             'DATE',
                             _formatDate(widget.showDate),
                           ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 20),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _summaryInfo('FORMAT', widget.selectedFormat),
-                        ),
-                        Expanded(
-                          child: _summaryInfo(
+                          const SizedBox(height: 16),
+                          _summaryInfo('FORMAT', widget.selectedFormat),
+                          const SizedBox(height: 16),
+                          _summaryInfo(
                             'LANGUAGE',
                             widget.selectedLanguage,
                           ),
+                        ] else ...[
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _summaryInfo(
+                                  'SEATS',
+                                  _selectedSeats.join(', '),
+                                ),
+                              ),
+                              Expanded(
+                                child: _summaryInfo(
+                                  'DATE',
+                                  _formatDate(widget.showDate),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _summaryInfo(
+                                  'FORMAT',
+                                  widget.selectedFormat,
+                                ),
+                              ),
+                              Expanded(
+                                child: _summaryInfo(
+                                  'LANGUAGE',
+                                  widget.selectedLanguage,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                        const SizedBox(height: 24),
+                        Divider(color: dividerSoft),
+                        const SizedBox(height: 24),
+                        _moneyRow(
+                          label: 'Subtotal',
+                          amountLabel:
+                              'LKR ${subtotal.toStringAsFixed(2)}',
+                          labelStyle: GoogleFonts.outfit(
+                            fontSize: 15,
+                            color: Colors.white.withValues(alpha: 0.85),
+                          ),
+                          amountStyle: GoogleFonts.outfit(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 24),
-                    const Divider(color: Colors.white24),
-                    const SizedBox(height: 24),
-
-                    _moneyRow(
-                      label: 'Subtotal',
-                      amountLabel: 'LKR ${subtotal.toStringAsFixed(2)}',
-                      labelStyle: GoogleFonts.outfit(
-                        fontSize: 15,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
-                      ),
-                      amountStyle: GoogleFonts.outfit(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onPrimaryContainer,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    _moneyRow(
-                      label: 'Booking Fees',
-                      amountLabel: 'LKR ${_bookingFee.toStringAsFixed(2)}',
-                      labelStyle: GoogleFonts.outfit(
-                        fontSize: 15,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
-                      ),
-                      amountStyle: GoogleFonts.outfit(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onPrimaryContainer,
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-                    _moneyRow(
-                      label: 'Total',
-                      amountLabel: 'LKR ${total.toStringAsFixed(2)}',
-                      labelStyle: GoogleFonts.outfit(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                      amountStyle: GoogleFonts.outfit(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onPrimaryContainer,
-                      ),
-                      minWidthForRow: 340,
-                    ),
-
-                    const SizedBox(height: 32),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          _debugBookingTotals();
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => PaymentScreen(
-                                movieTitle: widget.movieTitle,
-                                theatreName: widget.theatreName,
-                                showDate: widget.showDate,
-                                showTime: widget.showtime,
-                                ticketCount: _selectedSeats.length,
-                                amount: total.toStringAsFixed(2),
-                                selectedSeats: _selectedSeats.toList(),
+                        const SizedBox(height: 12),
+                        _moneyRow(
+                          label: 'Booking Fees',
+                          amountLabel:
+                              'LKR ${_bookingFee.toStringAsFixed(2)}',
+                          labelStyle: GoogleFonts.outfit(
+                            fontSize: 15,
+                            color: Colors.white.withValues(alpha: 0.85),
+                          ),
+                          amountStyle: GoogleFonts.outfit(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        _moneyRow(
+                          label: 'Total',
+                          amountLabel:
+                              'LKR ${total.toStringAsFixed(2)}',
+                          labelStyle: GoogleFonts.outfit(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          amountStyle: GoogleFonts.outfit(
+                            fontSize: 26,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.cinemaGold,
+                            letterSpacing: 0.2,
+                          ),
+                          minWidthForRow: 340,
+                        ),
+                        const SizedBox(height: 32),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              _debugBookingTotals();
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => PaymentScreen(
+                                    movieTitle: widget.movieTitle,
+                                    theatreName: widget.theatreName,
+                                    showDate: widget.showDate,
+                                    showTime: widget.showtime,
+                                    ticketCount: _selectedSeats.length,
+                                    amount: total.toStringAsFixed(2),
+                                    selectedSeats: _selectedSeats.toList(),
+                                  ),
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: isDark
+                                  ? AppColors.paymentButtonDark
+                                  : AppColors.paymentButton,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                'Proceed to Payment',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.outfit(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: isDark
-                              ? AppColors.paymentButtonDark
-                              : AppColors.paymentButton,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: Text(
-                          'Proceed to Payment',
-                          style: GoogleFonts.outfit(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ),
-                    ),
-                  ],
+                      ],
+                    );
+                  },
                 ),
               )
             else
@@ -403,11 +471,16 @@ class _BookingScreenState extends State<BookingScreen> {
                 padding: const EdgeInsets.all(32),
                 child: Text(
                   'Select a seat to see booking summary',
-                  style: GoogleFonts.outfit(color: Colors.grey),
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.outfit(
+                    color: scheme.onSurfaceVariant,
+                    fontSize: 15,
+                  ),
                 ),
               ),
             const SizedBox(height: 32),
           ],
+        ),
         ),
       ),
     );
@@ -452,7 +525,7 @@ class _BookingScreenState extends State<BookingScreen> {
         const SizedBox(height: 4),
         Text(
           value,
-          maxLines: 2,
+          maxLines: 6,
           overflow: TextOverflow.ellipsis,
           style: GoogleFonts.outfit(
             fontSize: 16,

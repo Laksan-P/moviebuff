@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../core/theme/app_colors.dart';
 import '../services/booking_service.dart';
 import '../services/auth_service.dart';
 import '../services/local_db_service.dart';
+import '../widgets/premium_screen_stack.dart';
 import 'my_bookings_screen.dart';
-import '../core/theme/app_colors.dart';
 
 class PaymentScreen extends StatefulWidget {
   final String movieTitle;
@@ -62,28 +63,34 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        foregroundColor: Theme.of(context).colorScheme.onSurface,
-      ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final isWide = constraints.maxWidth > 600;
+    final scheme = Theme.of(context).colorScheme;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-          return Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1200),
-              child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(
-                  horizontal: MediaQuery.sizeOf(context).width < 400 ? 16 : 24,
-                  vertical: 24,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        backgroundColor: scheme.surface.withValues(alpha: 0.82),
+        elevation: 0,
+        foregroundColor: scheme.onSurface,
+      ),
+      body: PremiumScreenStack(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth > 600;
+
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1200),
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.fromLTRB(
+                    MediaQuery.sizeOf(context).width < 400 ? 16 : 24,
+                    24,
+                    MediaQuery.sizeOf(context).width < 400 ? 16 : 24,
+                    48 + bottomInset,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                     Text(
                       'Complete Your\nPayment',
                       style: GoogleFonts.outfit(
@@ -133,6 +140,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             ),
           );
         },
+      ),
       ),
     );
   }
@@ -409,13 +417,17 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   child: ElevatedButton(
                     onPressed: _processPayment,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.paymentButton,
+                      backgroundColor: Theme.of(context).brightness ==
+                              Brightness.dark
+                          ? AppColors.cinemaGoldMuted
+                          : AppColors.paymentButton,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(14),
                       ),
                       elevation: 0,
+                      shadowColor: Colors.transparent,
                     ),
                     child: const Text('Pay'),
                   ),
@@ -479,6 +491,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 context,
               ).colorScheme.onSecondaryContainer.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: AppColors.cinemaGold.withValues(alpha: 0.35),
+                width: 1,
+              ),
             ),
             child: LayoutBuilder(
               builder: (context, c) {
@@ -491,11 +507,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   ).colorScheme.onSecondaryContainer.withValues(alpha: 0.6),
                 );
                 final amtStyle = GoogleFonts.outfit(
-                  fontSize: isWide ? 16 : 20,
+                  fontSize: isWide ? 18 : 22,
                   fontWeight: FontWeight.bold,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSecondaryContainer,
+                  color: AppColors.cinemaGold,
+                  letterSpacing: 0.3,
                 );
                 final amountText = 'LKR ${widget.amount}';
                 if (stack) {
@@ -768,7 +783,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
               const SizedBox(height: 4),
               Align(
                 alignment: Alignment.centerRight,
-                child: Text(value, style: valueStyle),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Text(value, style: valueStyle),
+                ),
               ),
             ],
           );
@@ -1103,39 +1122,67 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   Widget _summaryRow(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          flex: 2,
-          child: Text(
-            label,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.outfit(
-              fontSize: 13,
-              color: Theme.of(
-                context,
-              ).colorScheme.onPrimaryContainer.withValues(alpha: 0.6),
-            ),
+    return LayoutBuilder(
+      builder: (context, c) {
+        final narrow = c.maxWidth < 280;
+        final labelWidget = Text(
+          label,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.outfit(
+            fontSize: 13,
+            color: Theme.of(
+              context,
+            ).colorScheme.onPrimaryContainer.withValues(alpha: 0.6),
           ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          flex: 3,
-          child: Text(
-            value,
-            textAlign: TextAlign.end,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.outfit(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onPrimaryContainer,
-            ),
+        );
+        final valueWidget = Text(
+          value,
+          textAlign: narrow ? TextAlign.start : TextAlign.end,
+          maxLines: 4,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.outfit(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).colorScheme.onPrimaryContainer,
           ),
-        ),
-      ],
+        );
+        if (narrow) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              labelWidget,
+              const SizedBox(height: 4),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: valueWidget,
+              ),
+            ],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 2,
+              child: labelWidget,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              flex: 3,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: valueWidget,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

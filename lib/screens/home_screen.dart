@@ -16,6 +16,7 @@ import '../services/external_movie_service.dart';
 import '../providers/movie_provider.dart';
 import '../utils/movie_catalog_utils.dart';
 import '../widgets/app_logo.dart';
+import '../widgets/cinematic_background.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -27,6 +28,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentSliderIndex = 0;
   int _bottomNavIndex = 0;
+  int _tabTransitionToken = 0;
   String? _userName;
   final CarouselSliderController _carouselController =
       CarouselSliderController();
@@ -49,93 +51,147 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            const ConnectivityBanner(),
-            Expanded(child: _buildBody()),
-          ],
-        ),
+      extendBody: true,
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          const CinematicBackground(),
+          SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                const ConnectivityBanner(),
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeIn,
+                    transitionBuilder: (child, animation) {
+                      return FadeTransition(
+                        opacity: animation,
+                        child: child,
+                      );
+                    },
+                    child: KeyedSubtree(
+                      key: ValueKey<int>(_tabTransitionToken),
+                      child: _buildNavStack(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: LayoutBuilder(
         builder: (context, c) {
           final narrow = c.maxWidth < 400;
-          return Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: narrow ? 6 : 12,
-          vertical: 12,
-        ),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          border: Border(
-            top: BorderSide(
-              color: Theme.of(context).colorScheme.outlineVariant,
-              width: 0.5,
+          final scheme = Theme.of(context).colorScheme;
+          return SafeArea(
+            top: false,
+            minimum: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+            child: Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: narrow ? 6 : 10,
+                vertical: 10,
+              ),
+              decoration: BoxDecoration(
+                color: scheme.surface.withValues(alpha: 0.9),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(
+                  color: scheme.outline.withValues(alpha: 0.18),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    blurRadius: 20,
+                    offset: const Offset(0, -6),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildNavItem(
+                    0,
+                    Icons.home_outlined,
+                    Icons.home,
+                    'Home',
+                    compact: narrow,
+                  ),
+                  _buildNavItem(
+                    1,
+                    Icons.movie_outlined,
+                    Icons.movie,
+                    'Theatres',
+                    compact: narrow,
+                  ),
+                  _buildNavItem(
+                    2,
+                    Icons.confirmation_number_outlined,
+                    Icons.confirmation_number,
+                    'Bookings',
+                    compact: narrow,
+                  ),
+                  _buildNavItem(
+                    3,
+                    Icons.smartphone_outlined,
+                    Icons.smartphone,
+                    'Device',
+                    compact: narrow,
+                  ),
+                  _buildNavItem(
+                    4,
+                    Icons.person_outline,
+                    Icons.person,
+                    'Profile',
+                    compact: narrow,
+                  ),
+                ],
+              ),
             ),
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _buildNavItem(
-              0,
-              Icons.home_outlined,
-              Icons.home,
-              'Home',
-              compact: narrow,
-            ),
-            _buildNavItem(
-              1,
-              Icons.movie_outlined,
-              Icons.movie,
-              'Theatres',
-              compact: narrow,
-            ),
-            _buildNavItem(
-              2,
-              Icons.confirmation_number_outlined,
-              Icons.confirmation_number,
-              'Bookings',
-              compact: narrow,
-            ),
-            _buildNavItem(
-              3,
-              Icons.smartphone_outlined,
-              Icons.smartphone,
-              'Device',
-              compact: narrow,
-            ),
-            _buildNavItem(
-              4,
-              Icons.person_outline,
-              Icons.person,
-              'Profile',
-              compact: narrow,
-            ),
-          ],
-        ),
           );
         },
       ),
     );
   }
 
-  Widget _buildBody() {
-    switch (_bottomNavIndex) {
-      case 0:
-        return _buildHomeContent();
-      case 1:
-        return const TheatresScreen();
-      case 2:
-        return const MyBookingsScreen();
-      case 3:
-        return const DeviceScreen();
-      case 4:
-        return const ProfileScreen();
-      default:
-        return _buildHomeContent();
-    }
+  void _selectNavTab(int index) {
+    if (_bottomNavIndex == index) return;
+    setState(() {
+      _bottomNavIndex = index;
+      _tabTransitionToken++;
+    });
+  }
+
+  Widget _buildNavStack() {
+    return IndexedStack(
+      index: _bottomNavIndex,
+      sizing: StackFit.expand,
+      children: [
+        KeyedSubtree(
+          key: const ValueKey<String>('nav_home'),
+          child: _buildHomeContent(),
+        ),
+        const KeyedSubtree(
+          key: ValueKey<String>('nav_theatres'),
+          child: TheatresScreen(),
+        ),
+        const KeyedSubtree(
+          key: ValueKey<String>('nav_bookings'),
+          child: MyBookingsScreen(),
+        ),
+        const KeyedSubtree(
+          key: ValueKey<String>('nav_device'),
+          child: DeviceScreen(),
+        ),
+        const KeyedSubtree(
+          key: ValueKey<String>('nav_profile'),
+          child: ProfileScreen(),
+        ),
+      ],
+    );
   }
 
   Widget _buildHomeContent() {
@@ -176,8 +232,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.outfit(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w500,
+                                color: Theme.of(context).colorScheme.onSurface,
+                                fontWeight: FontWeight.w600,
                                 fontSize: 14,
                               ),
                             ),
@@ -447,9 +503,10 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
     }
-    return Stack(
-      children: [
-        CarouselSlider(
+    return RepaintBoundary(
+      child: Stack(
+        children: [
+          CarouselSlider(
           carouselController: _carouselController,
           options: CarouselOptions(
             height: height,
@@ -636,6 +693,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ],
+      ),
     );
   }
 
@@ -654,44 +712,56 @@ class _HomeScreenState extends State<HomeScreen> {
     String label, {
     bool compact = false,
   }) {
-    bool isActive = _bottomNavIndex == index;
-    return GestureDetector(
-      onTap: () => setState(() => _bottomNavIndex = index),
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: compact ? 4 : 16,
-          vertical: 8,
-        ),
-        decoration: BoxDecoration(
-          color: isActive
-              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              isActive ? activeIcon : icon,
+    final isActive = _bottomNavIndex == index;
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _selectNavTab(index),
+        borderRadius: BorderRadius.circular(18),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 5 : 14,
+            vertical: 8,
+          ),
+          decoration: BoxDecoration(
+            color: isActive
+                ? scheme.primary.withValues(alpha: 0.14)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
               color: isActive
-                  ? Theme.of(context).colorScheme.primary
-                  : Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.6),
-              size: 24,
+                  ? scheme.primary.withValues(alpha: 0.35)
+                  : Colors.transparent,
             ),
-            if (isActive) ...[
-              const SizedBox(width: 8),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.outfit(
-                  color: Theme.of(context).colorScheme.primary,
-                  fontWeight: FontWeight.bold,
-                ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isActive ? activeIcon : icon,
+                color: isActive
+                    ? scheme.primary
+                    : scheme.onSurface.withValues(alpha: 0.52),
+                size: 23,
               ),
+              if (isActive) ...[
+                const SizedBox(width: 7),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.outfit(
+                    color: scheme.primary,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12.5,
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -957,16 +1027,21 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildFeatureCard(String title, String desc) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outlineVariant,
-          width: 0.5,
-        ),
+        color: scheme.surface.withValues(alpha: 0.88),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: scheme.outline.withValues(alpha: 0.14)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -975,19 +1050,19 @@ class _HomeScreenState extends State<HomeScreen> {
             title,
             textAlign: TextAlign.center,
             style: GoogleFonts.outfit(
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w800,
               fontSize: 16,
+              height: 1.2,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
             desc,
             textAlign: TextAlign.center,
             style: GoogleFonts.outfit(
-              fontSize: 14,
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.7),
+              fontSize: 13.5,
+              height: 1.45,
+              color: scheme.onSurface.withValues(alpha: 0.68),
             ),
           ),
         ],

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../core/theme/app_colors.dart';
 import '../services/booking_service.dart';
 import '../utils/text_safety.dart';
+import '../widgets/premium_screen_stack.dart';
 
 class CancelBookingScreen extends StatefulWidget {
   final Map<String, dynamic> booking;
@@ -44,9 +46,9 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
 
     // Show success feedback and navigate back
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Booking cancelled successfully'),
-        backgroundColor: Color(0xFF4ADE80),
+      SnackBar(
+        content: const Text('Booking cancelled successfully'),
+        backgroundColor: AppColors.success,
       ),
     );
 
@@ -61,40 +63,50 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
     double refundAmount = originalAmount * 0.5;
     double cancellationFee = originalAmount * 0.5;
 
+    final scheme = Theme.of(context).colorScheme;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.surface,
+        backgroundColor: scheme.surface.withValues(alpha: 0.82),
         elevation: 0,
+        foregroundColor: scheme.onSurface,
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back,
-            color: Theme.of(context).colorScheme.onSurface,
+            color: scheme.onSurface,
           ),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Back to Bookings',
           style: GoogleFonts.outfit(
-            color: Theme.of(context).colorScheme.onSurface,
+            color: scheme.onSurface,
             fontSize: 16,
             fontWeight: FontWeight.w500,
           ),
         ),
         titleSpacing: 0,
       ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final isWide = constraints.maxWidth > 900;
+      body: PremiumScreenStack(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth > 900;
 
-          return Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1200),
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1200),
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.fromLTRB(
+                    24,
+                    24,
+                    24,
+                    24 + bottomInset + (constraints.maxWidth > 900 ? 0 : 100),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                     Text(
                       'Cancel Booking',
                       style: GoogleFonts.outfit(
@@ -167,9 +179,10 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
             ),
           );
         },
+        ),
       ),
-      bottomNavigationBar: MediaQuery.of(context).size.width > 900
-          ? null // Hide bottom bar in landscape (actions moved to right col)
+      bottomNavigationBar: MediaQuery.sizeOf(context).width > 900
+          ? null
           : _buildBottomBarMobile(),
     );
   }
@@ -219,7 +232,11 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
+              color: Theme.of(context).colorScheme.errorContainer.withValues(
+                    alpha: Theme.of(context).brightness == Brightness.dark
+                        ? 0.35
+                        : 0.45,
+                  ),
               borderRadius: BorderRadius.circular(16),
               border: Border(
                 left: BorderSide(
@@ -236,7 +253,7 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
                   style: GoogleFonts.outfit(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    color: Theme.of(context).colorScheme.onErrorContainer,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -424,11 +441,16 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
               _buildSummaryRow(
                 'Cancellation Fee (50%)',
                 '-LKR ${cancellationFee.toStringAsFixed(2)}',
-                valueColor: Colors.redAccent.shade100,
+                valueColor: Theme.of(context).colorScheme.error,
               ),
 
               const SizedBox(height: 24),
-              const Divider(color: Colors.white24),
+              Divider(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onPrimaryContainer
+                    .withValues(alpha: 0.2),
+              ),
               const SizedBox(height: 24),
 
               // You Will Receive Box
@@ -460,12 +482,16 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      'LKR ${refundAmount.toStringAsFixed(2)}',
-                      style: GoogleFonts.outfit(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.center,
+                      child: Text(
+                        'LKR ${refundAmount.toStringAsFixed(2)}',
+                        style: GoogleFonts.outfit(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.cinemaGold,
+                        ),
                       ),
                     ),
                   ],
@@ -478,10 +504,14 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.surface.withValues(alpha: 0.1),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .surface
+                      .withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -597,14 +627,18 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
   }
 
   Widget _buildBottomBarMobile() {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: scheme.surface.withValues(alpha: 0.94),
+        border: Border(
+          top: BorderSide(color: scheme.outlineVariant),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.05),
-            blurRadius: 10,
+            color: scheme.shadow.withValues(alpha: 0.08),
+            blurRadius: 12,
             offset: const Offset(0, -4),
           ),
         ],
@@ -614,36 +648,64 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
   }
 
   Widget _buildDetailRow(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 108,
-          child: Text(
-            '$label:',
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.outfit(
-              color: Theme.of(
-                context,
-              ).colorScheme.onPrimaryContainer.withValues(alpha: 0.7),
-              fontSize: 15,
+    return LayoutBuilder(
+      builder: (context, c) {
+        final stack = c.maxWidth < 360;
+        final labelStyle = GoogleFonts.outfit(
+          color: Theme.of(
+            context,
+          ).colorScheme.onPrimaryContainer.withValues(alpha: 0.7),
+          fontSize: 15,
+        );
+        final valueStyle = GoogleFonts.outfit(
+          color: Theme.of(context).colorScheme.onPrimaryContainer,
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+        );
+        if (stack) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$label:',
+                  style: labelStyle,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  maxLines: 8,
+                  overflow: TextOverflow.ellipsis,
+                  style: valueStyle,
+                ),
+              ],
             ),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            maxLines: 4,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.outfit(
-              color: Theme.of(context).colorScheme.onPrimaryContainer,
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 100,
+              child: Text(
+                '$label:',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: labelStyle,
+              ),
             ),
-          ),
-        ),
-      ],
+            Expanded(
+              child: Text(
+                value,
+                maxLines: 6,
+                overflow: TextOverflow.ellipsis,
+                style: valueStyle,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -667,9 +729,10 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
             child: Text(
               text,
               style: GoogleFonts.outfit(
-                color: Theme.of(
-                  context,
-                ).colorScheme.onPrimaryContainer.withValues(alpha: 0.9),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onErrorContainer
+                    .withValues(alpha: 0.92),
                 fontSize: 14,
                 height: 1.4,
               ),
@@ -681,40 +744,75 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
   }
 
   Widget _buildSummaryRow(String label, String value, {Color? valueColor}) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          flex: 3,
-          child: Text(
-            label,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.outfit(
-              color: Theme.of(
-                context,
-              ).colorScheme.onPrimaryContainer.withValues(alpha: 0.7),
-              fontSize: 15,
+    return LayoutBuilder(
+      builder: (context, c) {
+        final dense = c.maxWidth < 340;
+        final baseStyle = GoogleFonts.outfit(
+          color: Theme.of(context)
+              .colorScheme
+              .onPrimaryContainer
+              .withValues(alpha: 0.7),
+          fontSize: 15,
+        );
+        final valueBase = GoogleFonts.outfit(
+          color: valueColor ?? Theme.of(context).colorScheme.onPrimaryContainer,
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+        );
+        if (dense) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(label, style: baseStyle),
+                const SizedBox(height: 4),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Text(value, style: valueBase),
+                  ),
+                ),
+              ],
             ),
+          );
+        }
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 3,
+                child: Text(
+                  label,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: baseStyle,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 2,
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      value,
+                      textAlign: TextAlign.end,
+                      style: valueBase,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          flex: 2,
-          child: Text(
-            value,
-            textAlign: TextAlign.end,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.outfit(
-              color:
-                  valueColor ?? Theme.of(context).colorScheme.onPrimaryContainer,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
 

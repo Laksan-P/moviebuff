@@ -8,12 +8,13 @@ import 'package:provider/provider.dart';
 import '../core/validation/form_validators.dart';
 import '../providers/auth_provider.dart';
 import '../providers/movie_provider.dart';
-import '../providers/theme_provider.dart';
 import '../services/device_service.dart';
+import '../widgets/theme_toggle_button.dart';
 import '../services/local_db_service.dart';
 import '../services/profile_details_service.dart';
 import '../services/profile_photo_service.dart';
 import '../widgets/custom_button.dart';
+import '../widgets/cinematic_background.dart';
 import 'login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -295,7 +296,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-    final themeProv = context.watch<ThemeProvider>();
     final movieProv = context.watch<MovieProvider>();
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
@@ -309,24 +309,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final hasPhoto = _photoPath != null && File(_photoPath!).existsSync();
 
     return Scaffold(
-      backgroundColor: scheme.surface,
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _reloadProfile,
-          child: CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              SliverAppBar(
-                floating: true,
-                pinned: false,
-                elevation: 0,
-                backgroundColor: scheme.surface,
-                foregroundColor: scheme.onSurface,
-                title: Text(
-                  'My profile',
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
-                ),
-              ),
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          const CinematicBackground(),
+          SafeArea(
+            child: RefreshIndicator(
+              onRefresh: _reloadProfile,
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverAppBar(
+                    floating: true,
+                    pinned: false,
+                    elevation: 0,
+                    backgroundColor: scheme.surface.withValues(alpha: 0.75),
+                    foregroundColor: scheme.onSurface,
+                    title: Text(
+                      'My profile',
+                      style:
+                          GoogleFonts.outfit(fontWeight: FontWeight.w800, fontSize: 20),
+                    ),
+                    actions: const [
+                      Padding(
+                        padding: EdgeInsets.only(right: 12),
+                        child: Center(child: ThemeToggleButton(compact: true)),
+                      ),
+                    ],
+                  ),
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 110),
                 sliver: SliverList(
@@ -580,56 +591,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _sectionHeader(
-                            'App preferences',
-                            icon: Icons.tune_rounded,
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Theme follows your device unless you choose below.',
-                            style: GoogleFonts.outfit(
-                              fontSize: 12,
-                              color: muted,
-                              height: 1.35,
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: ThemeMode.values.map((m) {
-                              final selected = themeProv.mode == m;
-                              final label = switch (m) {
-                                ThemeMode.system => 'System',
-                                ThemeMode.light => 'Light',
-                                ThemeMode.dark => 'Dark',
-                              };
-                              return FilterChip(
-                                selected: selected,
-                                label: Text(
-                                  label,
-                                  style: GoogleFonts.outfit(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                onSelected: (_) {
-                                  themeProv.setMode(m);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Theme: ${m.name}')),
-                                  );
-                                },
-                              );
-                            }).toList(),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _roundedCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _sectionHeader(
                             'Account actions',
                             icon: Icons.logout_rounded,
                           ),
@@ -670,6 +631,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ),
         ),
+      ),
+        ],
       ),
     );
   }

@@ -11,6 +11,7 @@ import '../providers/movie_provider.dart';
 import '../services/api_service.dart';
 import '../services/device_service.dart';
 import '../widgets/custom_button.dart';
+import '../widgets/cinematic_background.dart';
 
 enum _LocationDisplayMode { none, realGps, lastKnown }
 
@@ -244,18 +245,25 @@ class _DeviceScreenState extends State<DeviceScreen> {
     final showAdbNote = !conn.isOnline && _apiTestOk == true;
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: Text(
           'Device',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+          style: GoogleFonts.outfit(fontWeight: FontWeight.w800, fontSize: 20),
         ),
-        backgroundColor: Theme.of(context).colorScheme.surface,
+        backgroundColor: Theme.of(context).colorScheme.surface.withValues(
+          alpha: 0.82,
+        ),
         foregroundColor: Theme.of(context).colorScheme.onSurface,
         elevation: 0,
       ),
-      body: SafeArea(
-        top: false,
-        child: ListView(
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          const CinematicBackground(),
+          SafeArea(
+            top: false,
+            child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 96),
           children: [
             _sectionTitle('Network'),
@@ -419,7 +427,9 @@ class _DeviceScreenState extends State<DeviceScreen> {
                 ],
               ),
           ],
-        ),
+            ),
+          ),
+        ],
       ),
     );
   }

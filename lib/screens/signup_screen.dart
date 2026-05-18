@@ -12,6 +12,8 @@ import '../providers/movie_provider.dart';
 import '../services/profile_details_service.dart';
 import 'admin/admin_dashboard_screen.dart';
 import '../widgets/app_logo.dart';
+import '../widgets/cinematic_background.dart';
+import '../widgets/glass_card.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -94,72 +96,61 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 800),
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  // Welcome Banner (Top on mobile)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 32,
-                      vertical: 48,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary,
-                      borderRadius: const BorderRadius.only(
-                        bottomLeft: Radius.circular(32),
-                        bottomRight: Radius.circular(32),
-                      ),
-                    ),
-                    child: Column(
-                      children: [
-                        const AppLogo(fontSize: 72),
-                        const SizedBox(height: 24),
-                        Text(
-                          'Welcome to MovieBuff!',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.outfit(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.onPrimary,
-                            height: 1.1,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Your gateway to premium cinema experiences. Find the best seats at the best theatres.',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.outfit(
-                            fontSize: 16,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onPrimary.withValues(alpha: 0.9),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Auth Content
-                  Padding(
-                    padding: const EdgeInsets.all(24.0),
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          const CinematicBackground(),
+          SafeArea(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 800),
+                child: SingleChildScrollView(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  child: GlassCard(
+                    useBlur: true,
+                    borderRadius: 26,
+                    padding: const EdgeInsets.fromLTRB(24, 32, 24, 28),
                     child: Form(
                       key: _formKey,
                       child: Column(
                         children: [
-                          // Toggle Switch
+                          const AppLogo(fontSize: 60),
+                          const SizedBox(height: 18),
+                          Text(
+                            'Create your account',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.outfit(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w800,
+                              color: scheme.onSurface,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Join MovieBuff — optional details stay on this device only.',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.outfit(
+                              fontSize: 13.5,
+                              height: 1.4,
+                              color: scheme.onSurface.withValues(alpha: 0.55),
+                            ),
+                          ),
+                          const SizedBox(height: 22),
                           Container(
                             decoration: BoxDecoration(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerHighest
-                                  .withValues(alpha: 0.3),
-                              borderRadius: BorderRadius.circular(50),
+                              color: scheme.surface.withValues(
+                                alpha: scheme.brightness == Brightness.dark
+                                    ? 0.15
+                                    : 0.4,
+                              ),
+                              borderRadius: BorderRadius.circular(40),
+                              border: Border.all(
+                                color: scheme.outline.withValues(alpha: 0.15),
+                              ),
                             ),
                             padding: const EdgeInsets.all(4),
                             child: Row(
@@ -169,100 +160,61 @@ class _SignupScreenState extends State<SignupScreen> {
                                   onTap: () {
                                     Navigator.of(context).pushReplacement(
                                       PageRouteBuilder(
-                                        pageBuilder:
-                                            (
-                                              context,
-                                              animation,
-                                              secondaryAnimation,
-                                            ) => const LoginScreen(),
-                                        transitionsBuilder:
-                                            (
-                                              context,
-                                              animation,
-                                              secondaryAnimation,
-                                              child,
-                                            ) {
-                                              return FadeTransition(
-                                                opacity: animation,
-                                                child: child,
-                                              );
-                                            },
+                                        pageBuilder: (c, a, _) =>
+                                            const LoginScreen(),
+                                        transitionsBuilder: (c, anim, _, ch) =>
+                                            FadeTransition(
+                                              opacity: anim,
+                                              child: ch,
+                                            ),
                                       ),
                                     );
                                   },
-                                  child: Container(
+                                  child: Padding(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 24,
-                                      vertical: 8,
+                                      horizontal: 22,
+                                      vertical: 10,
                                     ),
-                                    color: Colors.transparent,
                                     child: Text(
                                       'Login',
                                       style: GoogleFonts.outfit(
-                                        fontWeight: FontWeight.bold,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .withValues(alpha: 0.5),
+                                        fontWeight: FontWeight.w700,
+                                        color: scheme.onSurface.withValues(
+                                          alpha: 0.45,
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 24,
-                                    vertical: 8,
+                                    horizontal: 22,
+                                    vertical: 10,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.surface,
-                                    borderRadius: BorderRadius.circular(50),
+                                    color: scheme.surface,
+                                    borderRadius: BorderRadius.circular(36),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .shadow
-                                            .withValues(alpha: 0.1),
-                                        blurRadius: 2,
+                                        color: Colors.black.withValues(
+                                          alpha: 0.06,
+                                        ),
+                                        blurRadius: 8,
                                       ),
                                     ],
                                   ),
                                   child: Text(
                                     'Register',
                                     style: GoogleFonts.outfit(
-                                      fontWeight: FontWeight.bold,
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurface,
+                                      fontWeight: FontWeight.w800,
+                                      color: scheme.onSurface,
                                     ),
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(height: 32),
-
-                          Text(
-                            'Create Account',
-                            style: GoogleFonts.outfit(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Start your journey with us today',
-                            style: GoogleFonts.outfit(
-                              fontSize: 14,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurface.withValues(alpha: 0.5),
-                            ),
-                          ),
-                          const SizedBox(height: 32),
-
+                          const SizedBox(height: 24),
                           CustomTextField(
                             label: 'Full Name',
                             hint: 'Enter your full name',
@@ -273,7 +225,7 @@ class _SignupScreenState extends State<SignupScreen> {
                             ],
                             validator: FormValidators.name,
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 18),
                           CustomTextField(
                             label: 'Email Address',
                             hint: 'you@example.com',
@@ -285,7 +237,7 @@ class _SignupScreenState extends State<SignupScreen> {
                             ],
                             validator: FormValidators.registerEmail,
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 18),
                           CustomTextField(
                             label: 'Phone Number (optional)',
                             hint: '10 digits',
@@ -298,7 +250,7 @@ class _SignupScreenState extends State<SignupScreen> {
                             ],
                             validator: FormValidators.phoneOptional,
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 18),
                           CustomTextField(
                             label: 'Preferred cinema (optional)',
                             hint: 'e.g. Scope Cinemas Colombo',
@@ -309,7 +261,7 @@ class _SignupScreenState extends State<SignupScreen> {
                             ],
                             validator: FormValidators.preferredCinemaOptional,
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 18),
                           CustomTextField(
                             label: 'Favourite genre (optional)',
                             hint: 'e.g. Action, Drama',
@@ -320,7 +272,7 @@ class _SignupScreenState extends State<SignupScreen> {
                             ],
                             validator: FormValidators.favouriteGenreOptional,
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 18),
                           CustomTextField(
                             label: 'Password',
                             hint: 'Create a strong password',
@@ -332,7 +284,7 @@ class _SignupScreenState extends State<SignupScreen> {
                             ],
                             validator: FormValidators.registerPassword,
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 18),
                           CustomTextField(
                             label: 'Confirm Password',
                             hint: 'Confirm your password',
@@ -342,88 +294,75 @@ class _SignupScreenState extends State<SignupScreen> {
                             inputFormatters: [
                               LengthLimitingTextInputFormatter(64),
                             ],
-                            validator: (value) => FormValidators.confirmPassword(
+                            validator: (value) =>
+                                FormValidators.confirmPassword(
                               value,
                               _passwordController.text,
                             ),
                           ),
-                          const SizedBox(height: 24),
-
+                          const SizedBox(height: 18),
                           Row(
                             children: [
                               Checkbox(
                                 value: _termsAccepted,
-                                activeColor: Theme.of(
-                                  context,
-                                ).colorScheme.primary,
-                                onChanged: (v) =>
-                                    setState(() => _termsAccepted = v ?? false),
+                                activeColor: scheme.primary,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(5),
+                                ),
+                                onChanged: (v) => setState(
+                                  () => _termsAccepted = v ?? false,
+                                ),
                               ),
                               Expanded(
                                 child: Text(
                                   'I agree to the terms of service',
                                   style: GoogleFonts.outfit(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.7),
+                                    color: scheme.onSurface.withValues(
+                                      alpha: 0.68,
+                                    ),
                                     fontSize: 14,
                                   ),
                                 ),
                               ),
                             ],
                           ),
-
-                          const SizedBox(height: 24),
-
+                          const SizedBox(height: 20),
                           CustomButton(
                             text: 'Create Account',
                             onPressed: _signup,
                             isLoading: _isLoading,
                           ),
-
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 18),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                "Already have an account? ",
+                                'Already have an account? ',
                                 style: GoogleFonts.outfit(
-                                  color: Colors.grey[500],
+                                  color: scheme.onSurface.withValues(
+                                    alpha: 0.45,
+                                  ),
                                 ),
                               ),
                               GestureDetector(
                                 onTap: () {
                                   Navigator.of(context).pushReplacement(
                                     PageRouteBuilder(
-                                      pageBuilder:
-                                          (
-                                            context,
-                                            animation,
-                                            secondaryAnimation,
-                                          ) => const LoginScreen(),
-                                      transitionsBuilder:
-                                          (
-                                            context,
-                                            animation,
-                                            secondaryAnimation,
-                                            child,
-                                          ) {
-                                            return FadeTransition(
-                                              opacity: animation,
-                                              child: child,
-                                            );
-                                          },
+                                      pageBuilder: (c, a, _) =>
+                                          const LoginScreen(),
+                                      transitionsBuilder: (c, anim, _, ch) =>
+                                          FadeTransition(
+                                            opacity: anim,
+                                            child: ch,
+                                          ),
                                     ),
                                   );
                                 },
                                 child: Text(
                                   'Sign In',
                                   style: GoogleFonts.outfit(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.primary,
-                                    fontWeight: FontWeight.bold,
+                                    color: scheme.primary,
+                                    fontWeight: FontWeight.w800,
                                   ),
                                 ),
                               ),
@@ -433,11 +372,11 @@ class _SignupScreenState extends State<SignupScreen> {
                       ),
                     ),
                   ),
-                ],
+                ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

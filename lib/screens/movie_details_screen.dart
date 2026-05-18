@@ -3,9 +3,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'booking_screen.dart';
+import '../core/theme/app_colors.dart';
 import '../providers/movie_provider.dart';
 import '../services/showtime_service.dart';
 import '../utils/movie_catalog_utils.dart';
+import '../widgets/glass_card.dart';
+import '../widgets/premium_screen_stack.dart';
 
 class MovieDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> movie;
@@ -239,24 +242,30 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
     final mp = context.watch<MovieProvider>();
 
     if (mp.awaitingCatalogueUi) {
+      final scheme = Theme.of(context).colorScheme;
       return Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.surface,
+        backgroundColor: Colors.transparent,
         appBar: AppBar(
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          foregroundColor: Theme.of(context).colorScheme.onSurface,
+          backgroundColor: scheme.surface.withValues(alpha: 0.82),
+          foregroundColor: scheme.onSurface,
           elevation: 0,
         ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text(
-                'Loading catalogue...',
-                style: GoogleFonts.outfit(fontSize: 15),
-              ),
-            ],
+        body: PremiumScreenStack(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text(
+                  'Loading catalogue...',
+                  style: GoogleFonts.outfit(
+                    fontSize: 15,
+                    color: scheme.onSurface,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -270,31 +279,63 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
 
     final filteredShowtimes = _getFilteredShowtimes();
 
+    final scheme = Theme.of(context).colorScheme;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        foregroundColor: Theme.of(context).colorScheme.onSurface,
+        backgroundColor: scheme.surface.withValues(alpha: 0.82),
+        foregroundColor: scheme.onSurface,
         elevation: 0,
       ),
-      body: _isloadingShowtimes
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+      body: PremiumScreenStack(
+        child: _isloadingShowtimes
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                padding: EdgeInsets.only(bottom: 24 + bottomInset),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                   // Trailer / Poster Section
                   Center(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 24),
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          _MovieDetailsPosterCard(
-                            rawMovie: widget.movie,
-                            title: (_movie['title'] ?? 'Movie').toString(),
-                          ),
-                          Material(
+                      child: SizedBox(
+                        width: 260,
+                        height: 380,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          clipBehavior: Clip.none,
+                          children: [
+                            _MovieDetailsPosterCard(
+                              rawMovie: widget.movie,
+                              title: (_movie['title'] ?? 'Movie').toString(),
+                            ),
+                            Positioned(
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              height: 130,
+                              child: IgnorePointer(
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    borderRadius: const BorderRadius.vertical(
+                                      bottom: Radius.circular(24),
+                                    ),
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        Colors.transparent,
+                                        Colors.black.withValues(alpha: 0.72),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Material(
                             color: Colors.transparent,
                             child: InkWell(
                               onTap: () async {
@@ -345,7 +386,8 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                                       ).showSnackBar(
                                         SnackBar(
                                           content: Text('Error: $e'),
-                                          backgroundColor: Colors.red,
+                                          backgroundColor:
+                                              Theme.of(context).colorScheme.error,
                                         ),
                                       );
                                     }
@@ -379,6 +421,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                       ),
                     ),
                   ),
+                  ),
 
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -410,15 +453,15 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                           runSpacing: 4,
                           children: [
                             const Icon(
-                              Icons.star,
-                              color: Colors.amber,
+                              Icons.star_rounded,
+                              color: AppColors.cinemaGold,
                               size: 18,
                             ),
                             const SizedBox(width: 2),
                             Text(
                               _movie['rating'] ?? 'N/A',
                               style: GoogleFonts.outfit(
-                                color: Colors.amber[700],
+                                color: AppColors.cinemaGoldMuted,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 13,
                               ),
@@ -583,32 +626,19 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                   const SizedBox(height: 32),
 
                   // Dynamic Filters Container
-                  Container(
-                    margin: const EdgeInsets.all(24),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: Theme.of(context).colorScheme.outlineVariant,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.shadow.withValues(alpha: 0.02),
-                          blurRadius: 10,
-                        ),
-                      ],
-                    ),
-                    child: GridView.count(
-                      crossAxisCount: 2,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 4.5,
-                      children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: GlassCard(
+                      borderRadius: 16,
+                      padding: const EdgeInsets.all(16),
+                      child: GridView.count(
+                        crossAxisCount: 2,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        mainAxisSpacing: 12,
+                        crossAxisSpacing: 12,
+                        childAspectRatio: 4.5,
+                        children: [
                         _filterDropdown(
                           label: selectedDate,
                           options: _generateDates(),
@@ -657,6 +687,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                         ),
                       ],
                     ),
+                  ),
                   ),
 
                   // Showtimes Section
@@ -716,20 +747,20 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                                     vertical: 12,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.surface,
+                                    color: scheme.surface.withValues(
+                                      alpha: 0.82,
+                                    ),
                                     borderRadius: BorderRadius.circular(16),
                                     border: Border.all(
-                                      color: const Color(
-                                        0xFF10B981,
-                                      ).withValues(alpha: 0.3),
+                                      color: AppColors.success.withValues(
+                                        alpha: 0.35,
+                                      ),
                                     ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: const Color(
-                                          0xFF10B981,
-                                        ).withValues(alpha: 0.1),
+                                        color: AppColors.success.withValues(
+                                          alpha: 0.12,
+                                        ),
                                         blurRadius: 10,
                                         offset: const Offset(0, 4),
                                       ),
@@ -741,9 +772,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                                         Text(
                                           t['theatre'] ?? '',
                                           style: GoogleFonts.outfit(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurface
+                                            color: scheme.onSurface
                                                 .withValues(alpha: 0.5),
                                             fontSize: 11,
                                             fontWeight: FontWeight.bold,
@@ -752,7 +781,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                                       Text(
                                         t['time'],
                                         style: GoogleFonts.outfit(
-                                          color: const Color(0xFF10B981),
+                                          color: AppColors.success,
                                           fontWeight: FontWeight.w900,
                                           fontSize: 18,
                                         ),
@@ -760,9 +789,9 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                                       Text(
                                         t['label'],
                                         style: GoogleFonts.outfit(
-                                          color: const Color(
-                                            0xFF10B981,
-                                          ).withValues(alpha: 0.8),
+                                          color: AppColors.success.withValues(
+                                            alpha: 0.85,
+                                          ),
                                           fontSize: 11,
                                           fontWeight: FontWeight.w600,
                                         ),
@@ -781,6 +810,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                 ],
               ),
             ),
+      ),
     );
   }
 
@@ -802,7 +832,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
       decoration: BoxDecoration(
         color: isSelected
             ? Theme.of(context).colorScheme.primary
-            : Theme.of(context).colorScheme.surface,
+            : Theme.of(context).colorScheme.surface.withValues(alpha: 0.78),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isSelected
@@ -869,7 +899,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: Theme.of(context).colorScheme.outlineVariant,
           ),

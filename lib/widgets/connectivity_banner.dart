@@ -4,8 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../providers/connectivity_provider.dart';
 
-/// Compact pill that shows current network state.
-/// Online -> subtle green pill, Offline -> prominent red banner.
+/// Compact network state — subtle in online mode, clear when offline.
 class ConnectivityBanner extends StatelessWidget {
   const ConnectivityBanner({super.key});
 
@@ -13,44 +12,58 @@ class ConnectivityBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final conn = context.watch<ConnectivityProvider>();
     final online = conn.isOnline;
+    final scheme = Theme.of(context).colorScheme;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      color: online
-          ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.08)
-          : Theme.of(context).colorScheme.error,
-      child: Row(
-        children: [
-          Icon(
-            online ? Icons.wifi_rounded : Icons.wifi_off_rounded,
-            size: 16,
-            color: online
-                ? Theme.of(context).colorScheme.primary
-                : Colors.white,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              conn.label,
-              style: GoogleFonts.outfit(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: online
-                    ? Theme.of(context).colorScheme.onSurface
-                    : Colors.white,
-              ),
+    final bg = online
+        ? scheme.primary.withValues(alpha: 0.08)
+        : scheme.error.withValues(alpha: 0.92);
+    final fg = online ? scheme.onSurface : scheme.onError;
+
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: bg,
+          border: Border(
+            bottom: BorderSide(
+              color: online
+                  ? scheme.outline.withValues(alpha: 0.15)
+                  : Colors.transparent,
             ),
           ),
-          if (!online)
-            Text(
-              'Showing cached data',
-              style: GoogleFonts.outfit(
-                fontSize: 11,
-                color: Colors.white.withValues(alpha: 0.85),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              online ? Icons.wifi_rounded : Icons.wifi_off_rounded,
+              size: 18,
+              color: online ? scheme.primary : fg,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                conn.label,
+                style: GoogleFonts.outfit(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  height: 1.25,
+                  color: online ? scheme.onSurface : fg,
+                ),
               ),
             ),
-        ],
+            if (!online)
+              Text(
+                'Cached',
+                style: GoogleFonts.outfit(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: fg.withValues(alpha: 0.9),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

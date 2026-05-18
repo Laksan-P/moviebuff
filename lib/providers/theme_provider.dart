@@ -38,6 +38,16 @@ class ThemeProvider extends ChangeNotifier {
     debugPrint('🎨 THEME - Saved mode: $m');
   }
 
+  /// System → Light → Dark → System (persisted).
+  Future<void> cycleMode() async {
+    final next = switch (_mode) {
+      ThemeMode.system => ThemeMode.light,
+      ThemeMode.light => ThemeMode.dark,
+      ThemeMode.dark => ThemeMode.system,
+    };
+    await setMode(next);
+  }
+
   String _modeToString(ThemeMode m) {
     switch (m) {
       case ThemeMode.light:

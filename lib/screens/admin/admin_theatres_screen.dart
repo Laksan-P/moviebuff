@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../providers/movie_provider.dart';
 import '../../services/admin_catalog_service.dart';
 import '../../services/theatre_service.dart';
+import '../../widgets/premium_screen_stack.dart';
 
 class AdminTheatresScreen extends StatefulWidget {
   const AdminTheatresScreen({super.key});
@@ -215,111 +216,172 @@ class _AdminTheatresScreenState extends State<AdminTheatresScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('Manage Theatres'),
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        foregroundColor: Theme.of(context).colorScheme.onSurface,
+        backgroundColor: scheme.surface.withValues(alpha: 0.82),
+        foregroundColor: scheme.onSurface,
+        elevation: 0,
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showTheatreDialog(),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        child: Icon(Icons.add, color: Theme.of(context).colorScheme.onPrimary),
+        backgroundColor: scheme.primary,
+        child: Icon(Icons.add, color: scheme.onPrimary),
       ),
-      body: Consumer<MovieProvider>(
-        builder: (context, prov, _) {
-          return FutureBuilder<List<Map<String, dynamic>>>(
-            future: AdminCatalogService.mergeTheatresForAdmin(prov.movies),
-            builder: (context, snapshot) {
-              if (!snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final theatres = snapshot.data!;
-              if (theatres.isEmpty) {
-                return Center(
-                  child: Text(
-                    'No theatres in this view',
-                    style: GoogleFonts.outfit(
-                      fontSize: 16,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                );
-              }
-              return RefreshIndicator(
-                onRefresh: () async {
-                  await prov.load(forceRefresh: true);
-                  if (context.mounted) setState(() {});
-                },
-                child: ListView.separated(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 96),
-                  itemCount: theatres.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final theatre = theatres[index];
-                    return Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surface,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      body: PremiumScreenStack(
+        child: Consumer<MovieProvider>(
+          builder: (context, prov, _) {
+            return FutureBuilder<List<Map<String, dynamic>>>(
+              future: AdminCatalogService.mergeTheatresForAdmin(prov.movies),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final theatres = snapshot.data!;
+                if (theatres.isEmpty) {
+                  return Center(
+                    child: Text(
+                      'No theatres in this view',
+                      style: GoogleFonts.outfit(
+                        fontSize: 16,
+                        color: scheme.onSurfaceVariant,
                       ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Column(
+                    ),
+                  );
+                }
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    await prov.load(forceRefresh: true);
+                    if (context.mounted) setState(() {});
+                  },
+                  child: ListView.separated(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 96),
+                    itemCount: theatres.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final theatre = theatres[index];
+                      return Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: scheme.surface.withValues(alpha: 0.9),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: scheme.outlineVariant),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(
+                                alpha: scheme.brightness == Brightness.dark
+                                    ? 0.28
+                                    : 0.05,
+                              ),
+                              blurRadius: 14,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: LayoutBuilder(
+                          builder: (context, rowConstraints) {
+                            final narrow = rowConstraints.maxWidth < 360;
+                            final row = Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  theatre['name']?.toString() ?? '',
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.outfit(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        theatre['name']?.toString() ?? '',
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.outfit(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                          color: scheme.onSurface,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        theatre['location']?.toString() ?? '',
+                                        maxLines: 3,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.outfit(
+                                          color: scheme.onSurfaceVariant,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  theatre['location']?.toString() ?? '',
-                                  maxLines: 3,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.outfit(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurfaceVariant,
-                                    fontSize: 14,
+                                if (!narrow) ...[
+                                  IconButton(
+                                    tooltip: 'Edit',
+                                    icon: Icon(
+                                      Icons.edit_outlined,
+                                      color: scheme.primary,
+                                    ),
+                                    onPressed: () =>
+                                        _showTheatreDialog(theatre: theatre),
                                   ),
-                                ),
+                                  IconButton(
+                                    tooltip: 'Delete',
+                                    icon: Icon(
+                                      Icons.delete_outline_rounded,
+                                      color: scheme.error,
+                                    ),
+                                    onPressed: () => _confirmDelete(theatre),
+                                  ),
+                                ],
                               ],
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.blue),
-                            onPressed: () =>
-                                _showTheatreDialog(theatre: theatre),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () => _confirmDelete(theatre),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              );
-            },
-          );
-        },
+                            );
+                            if (narrow) {
+                              return Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.stretch,
+                                children: [
+                                  row,
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      IconButton(
+                                        tooltip: 'Edit',
+                                        icon: Icon(
+                                          Icons.edit_outlined,
+                                          color: scheme.primary,
+                                        ),
+                                        onPressed: () => _showTheatreDialog(
+                                          theatre: theatre,
+                                        ),
+                                      ),
+                                      IconButton(
+                                        tooltip: 'Delete',
+                                        icon: Icon(
+                                          Icons.delete_outline_rounded,
+                                          color: scheme.error,
+                                        ),
+                                        onPressed: () =>
+                                            _confirmDelete(theatre),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              );
+                            }
+                            return row;
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }

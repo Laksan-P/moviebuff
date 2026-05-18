@@ -11,9 +11,11 @@ import 'admin_theatres_screen.dart';
 import 'admin_cancellations_screen.dart';
 import '../../services/auth_service.dart';
 import '../../services/booking_service.dart';
+import '../../providers/connectivity_provider.dart';
 import '../login_screen.dart';
 import '../../core/theme/app_colors.dart';
 import '../../utils/text_safety.dart';
+import '../../widgets/cinematic_background.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -26,7 +28,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   List<Map<String, dynamic>> _bookings = [];
   List<Map<String, dynamic>> _theatres = [];
   List<Map<String, dynamic>> _movies = [];
-  bool _isLoading = true;
+  bool _bookingsLoading = true;
+  bool _catalogueCountsLoading = true;
+  MovieProvider? _movieProv;
 
   // Stats
   int _totalBookings = 0;
@@ -39,19 +43,49 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _loadDashboardData();
+      if (!mounted) return;
+      _movieProv = context.read<MovieProvider>();
+      _movieProv!.addListener(_onCatalogueChanged);
+      _loadBookings();
+      _onCatalogueChanged();
     });
   }
 
-  Future<void> _loadDashboardData() async {
-    final movieProv = context.read<MovieProvider>();
-    final catalogueMovies = movieProv.movies;
+  @override
+  void dispose() {
+    _movieProv?.removeListener(_onCatalogueChanged);
+    super.dispose();
+  }
 
-    final bookings = await BookingService.getBookings();
+  void _onCatalogueChanged() {
+    final prov = _movieProv;
+    if (prov == null || !mounted) return;
+    if (!prov.catalogueReady) {
+      if (!_catalogueCountsLoading) {
+        setState(() => _catalogueCountsLoading = true);
+      }
+      return;
+    }
+    _syncCatalogueCounts(prov.movies);
+  }
+
+  Future<void> _syncCatalogueCounts(
+    List<Map<String, dynamic>> catalogueMovies,
+  ) async {
     final movies =
         await AdminCatalogService.mergeMoviesForAdmin(catalogueMovies);
     final theatres =
         await AdminCatalogService.mergeTheatresForAdmin(catalogueMovies);
+    if (!mounted) return;
+    setState(() {
+      _movies = movies;
+      _theatres = theatres;
+      _catalogueCountsLoading = false;
+    });
+  }
+
+  Future<void> _loadBookings() async {
+    final bookings = await BookingService.getBookings();
 
     int total = 0;
     int confirmed = 0;
@@ -60,9 +94,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     double refunded = 0;
     for (var b in bookings) {
       total++;
-      // Parse amount safely: remove non-numeric characters (except dot)
-      String rawAmt = b['amount'].toString().replaceAll(RegExp(r'[^0-9.]'), '');
-      double price = double.tryParse(rawAmt) ?? 0.0;
+      final rawAmt =
+          b['amount'].toString().replaceAll(RegExp(r'[^0-9.]'), '');
+      final price = double.tryParse(rawAmt) ?? 0.0;
 
       if (b['status'] == 'Confirmed') {
         confirmed++;
@@ -70,8 +104,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       } else if (b['status'] == 'Cancelled' ||
           b['status'] == 'Cancellation Requested') {
         cancelled++;
-        // 50% is retained as revenue, 50% is refunded
-        double cancellationFee = price * 0.5;
+        final cancellationFee = price * 0.5;
         revenue += cancellationFee;
         refunded += price * 0.5;
       }
@@ -80,49 +113,56 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     if (mounted) {
       setState(() {
         _bookings = bookings.reversed.toList();
-        _movies = movies;
-        _theatres = theatres;
         _totalBookings = total;
         _confirmedBookings = confirmed;
         _totalRevenue = revenue;
         _cancellations = cancelled;
         _refundedAmount = refunded;
-        _isLoading = false;
+        _bookingsLoading = false;
       });
     }
   }
 
+  Future<void> _refreshDashboard() async {
+    setState(() {
+      _bookingsLoading = true;
+      _catalogueCountsLoading = true;
+    });
+    await _loadBookings();
+    if (!mounted) return;
+    final prov = context.read<MovieProvider>();
+    await prov.load(forceRefresh: true);
+    if (!mounted) return;
+    await _syncCatalogueCounts(prov.movies);
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
+    context.watch<MovieProvider>();
 
     final now = DateTime.now();
     final dateStr =
         '${_getMonth(now.month)} ${now.day}, ${now.year} ${_formatTime(now)}';
+    final scheme = Theme.of(context).colorScheme;
+    final conn = context.watch<ConnectivityProvider>();
 
     return Scaffold(
-      backgroundColor: Theme.of(
-        context,
-      ).colorScheme.surface, // Adaptive background
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        title: const Text('Admin Dashboard'),
-        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-        foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+        title: Text(
+          'Control center',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.w800, fontSize: 20),
+        ),
+        backgroundColor: scheme.surface.withValues(alpha: 0.82),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              setState(() => _isLoading = true);
-              _loadDashboardData();
-            },
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: _refreshDashboard,
           ),
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.logout_rounded),
             tooltip: 'Logout',
             onPressed: () async {
-              // Show confirmation dialog
               final confirmed = await showDialog<bool>(
                 context: context,
                 builder: (context) => AlertDialog(
@@ -135,9 +175,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(context, true),
-                      child: const Text(
+                      child: Text(
                         'Logout',
-                        style: TextStyle(color: Colors.red),
+                        style: TextStyle(color: scheme.error),
                       ),
                     ),
                   ],
@@ -157,156 +197,227 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.stretch, // Force children to fill width
-          children: [
-            // Header
-            Text(
-              'Admin Dashboard',
-              style: GoogleFonts.outfit(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              "Here's your business overview. Last updated: $dateStr",
-              style: GoogleFonts.outfit(
-                fontSize: 14,
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
-            ),
-            const SizedBox(height: 32),
-
-            // --- STATS SECTION: FORCED VERTICAL STACK (1 COLUMN) ---
-            _buildStatCardFullWidth(
-              title: 'TOTAL BOOKINGS',
-              value: '$_totalBookings',
-              subValue: 'Confirmed: $_confirmedBookings',
-            ),
-            const SizedBox(height: 16),
-            _buildStatCardFullWidth(
-              title: 'TOTAL REVENUE',
-              value: 'LKR ${_totalRevenue.toStringAsFixed(2)}',
-              isRevenue: true,
-            ),
-            const SizedBox(height: 16),
-            _buildStatCardFullWidth(
-              title: 'CANCELLATIONS',
-              value: '$_cancellations',
-              subValue: 'Refunded: LKR ${_refundedAmount.asFixed(2)}',
-              subValueColor: Colors.redAccent,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const AdminCancellationsScreen(),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          const CinematicBackground(),
+          SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'MovieBuff Admin',
+                  style: GoogleFonts.outfit(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    height: 1.1,
+                    color: scheme.onSurface,
                   ),
-                ).then((_) => _loadDashboardData());
-              },
-            ),
-
-            // --------------------------------------------------------
-            const SizedBox(height: 32),
-
-            // Middle Sections (Dynamic Layout)
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final bool isWide = constraints.maxWidth > 1100;
-
-                if (isWide) {
-                  return Column(
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(child: _buildTheatreSection()),
-                          const SizedBox(width: 24),
-                          Expanded(child: _buildMovieSection()),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      _buildRecentBookings(),
-                    ],
-                  );
-                } else {
-                  return Column(
-                    children: [
-                      _buildTheatreSection(),
-                      const SizedBox(height: 24),
-                      _buildMovieSection(),
-                      const SizedBox(height: 24),
-                      _buildRecentBookings(),
-                    ],
-                  );
-                }
-              },
-            ),
-
-            const SizedBox(height: 32),
-
-            // Quick Actions
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.tertiaryContainer,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Quick Admin Actions',
-                    style: GoogleFonts.outfit(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onTertiaryContainer,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Overview · last updated $dateStr',
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    color: scheme.onSurface.withValues(alpha: 0.55),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _adminChip(
+                      context,
+                      conn.isOnline ? Icons.cloud_done_outlined : Icons.cloud_off,
+                      conn.isOnline ? 'Network OK' : 'Offline mode',
+                      conn.isOnline ? scheme.primary : scheme.error,
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildActionButton('Manage Theatres', () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const AdminTheatresScreen(),
+                    _adminChip(
+                      context,
+                      Icons.movie_creation_outlined,
+                      _catalogueCountsLoading
+                          ? 'Movies…'
+                          : '${_movies.length} movies',
+                      scheme.secondary,
+                    ),
+                    _adminChip(
+                      context,
+                      Icons.theater_comedy_outlined,
+                      _catalogueCountsLoading
+                          ? 'Theatres…'
+                          : '${_theatres.length} theatres',
+                      scheme.tertiary,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                _buildStatCardFullWidth(
+                  title: 'TOTAL BOOKINGS',
+                  value: _bookingsLoading ? '…' : '$_totalBookings',
+                  subValue: _bookingsLoading
+                      ? 'Loading bookings…'
+                      : 'Confirmed: $_confirmedBookings',
+                ),
+                const SizedBox(height: 14),
+                _buildStatCardFullWidth(
+                  title: 'TOTAL REVENUE',
+                  value: _bookingsLoading
+                      ? '…'
+                      : 'LKR ${_totalRevenue.toStringAsFixed(2)}',
+                  isRevenue: true,
+                ),
+                const SizedBox(height: 14),
+                _buildStatCardFullWidth(
+                  title: 'CANCELLATIONS',
+                  value: _bookingsLoading ? '…' : '$_cancellations',
+                  subValue: _bookingsLoading
+                      ? 'Loading…'
+                      : 'Refunded: LKR ${_refundedAmount.asFixed(2)}',
+                  subValueColor: scheme.error,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const AdminCancellationsScreen(),
+                      ),
+                    ).then((_) => _refreshDashboard());
+                  },
+                ),
+                const SizedBox(height: 28),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final bool isWide = constraints.maxWidth > 1100;
+
+                    if (isWide) {
+                      return Column(
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(child: _buildTheatreSection()),
+                              const SizedBox(width: 20),
+                              Expanded(child: _buildMovieSection()),
+                            ],
                           ),
-                        ).then((_) => _loadDashboardData());
-                      }),
-                      const SizedBox(height: 16),
-                      _buildActionButton('Manage Showtimes', () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const AdminShowtimesScreen(),
-                          ),
-                        );
-                      }),
-                      const SizedBox(height: 16),
-                      _buildActionButton('Pending Cancellations', () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const AdminCancellationsScreen(),
-                          ),
-                        ).then((_) => _loadDashboardData());
-                      }),
-                    ],
-                  ),
-                ],
-              ),
+                          const SizedBox(height: 20),
+                          _buildRecentBookings(),
+                        ],
+                      );
+                    } else {
+                      return Column(
+                        children: [
+                          _buildTheatreSection(),
+                          const SizedBox(height: 20),
+                          _buildMovieSection(),
+                          const SizedBox(height: 20),
+                          _buildRecentBookings(),
+                        ],
+                      );
+                    }
+                  },
+                ),
+                const SizedBox(height: 28),
+                _buildQuickActions(),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _adminChip(
+    BuildContext context,
+    IconData icon,
+    String label,
+    Color accent,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: scheme.surface.withValues(alpha: 0.88),
+        border: Border.all(color: accent.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18, color: accent),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: GoogleFonts.outfit(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: scheme.onSurface,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActions() {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: scheme.surface.withValues(alpha: 0.88),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: scheme.outline.withValues(alpha: 0.18)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Quick actions',
+            style: GoogleFonts.outfit(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: scheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildActionButton('Manage Theatres', () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AdminTheatresScreen()),
+            ).then((_) {
+              _loadBookings();
+              _onCatalogueChanged();
+            });
+          }),
+          const SizedBox(height: 12),
+          _buildActionButton('Manage Showtimes', () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AdminShowtimesScreen()),
+            );
+          }),
+          const SizedBox(height: 12),
+          _buildActionButton('Pending Cancellations', () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const AdminCancellationsScreen(),
+              ),
+            ).then((_) {
+              _loadBookings();
+              _onCatalogueChanged();
+            });
+          }),
+        ],
       ),
     );
   }
@@ -326,17 +437,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       child: Container(
         width:
             double.infinity, // Ensures the card takes the full available width
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.secondaryContainer,
-          borderRadius: BorderRadius.circular(16),
+          color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.16),
+          ),
           boxShadow: [
             BoxShadow(
-              color: Theme.of(
-                context,
-              ).colorScheme.shadow.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 22,
+              offset: const Offset(0, 10),
             ),
           ],
         ),
@@ -349,33 +461,34 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 Text(
                   title,
                   style: GoogleFonts.outfit(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSecondaryContainer.withValues(alpha: 0.6),
-                    letterSpacing: 1,
+                    ).colorScheme.onSurface.withValues(alpha: 0.5),
+                    letterSpacing: 1.1,
                   ),
                 ),
                 if (onTap != null)
                   Icon(
-                    Icons.arrow_forward_ios,
+                    Icons.arrow_forward_ios_rounded,
                     size: 14,
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSecondaryContainer.withValues(alpha: 0.6),
+                    ).colorScheme.onSurface.withValues(alpha: 0.45),
                   ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Text(
               value,
               style: GoogleFonts.outfit(
-                fontSize: 32,
+                fontSize: 30,
                 fontWeight: FontWeight.w900,
+                height: 1.1,
                 color: isRevenue
-                    ? Theme.of(context).colorScheme.primary
-                    : Theme.of(context).colorScheme.onSecondaryContainer,
+                    ? AppColors.cinemaGold
+                    : Theme.of(context).colorScheme.onSurface,
               ),
             ),
             if (subValue != null) ...[
@@ -384,7 +497,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 subValue,
                 style: GoogleFonts.outfit(
                   fontSize: 13,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w700,
                   color:
                       subValueColor ?? Theme.of(context).colorScheme.secondary,
                 ),
@@ -400,8 +513,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.tertiaryContainer,
-        borderRadius: BorderRadius.circular(16),
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.88),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.16),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -417,7 +533,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   style: GoogleFonts.outfit(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onTertiaryContainer,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ),
@@ -429,7 +545,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     MaterialPageRoute(
                       builder: (_) => const AdminTheatresScreen(),
                     ),
-                  ).then((_) => _loadDashboardData());
+                  ).then((_) {
+              _loadBookings();
+              _onCatalogueChanged();
+            });
                 },
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -471,7 +590,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   MaterialPageRoute(
                     builder: (_) => const AdminTheatresScreen(),
                   ),
-                ).then((_) => _loadDashboardData());
+                ).then((_) {
+              _loadBookings();
+              _onCatalogueChanged();
+            });
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.primary,
@@ -493,8 +615,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.tertiaryContainer,
-        borderRadius: BorderRadius.circular(16),
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.88),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.16),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -510,7 +635,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   style: GoogleFonts.outfit(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onTertiaryContainer,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ),
@@ -522,7 +647,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     MaterialPageRoute(
                       builder: (_) => const AdminMoviesScreen(),
                     ),
-                  ).then((_) => _loadDashboardData());
+                  ).then((_) {
+              _loadBookings();
+              _onCatalogueChanged();
+            });
                 },
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -564,7 +692,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const AdminMoviesScreen()),
-                ).then((_) => _loadDashboardData());
+                ).then((_) {
+              _loadBookings();
+              _onCatalogueChanged();
+            });
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.primary,
@@ -586,8 +717,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.tertiaryContainer,
-        borderRadius: BorderRadius.circular(16),
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.88),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.16),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -600,7 +734,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 style: GoogleFonts.outfit(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onTertiaryContainer,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               GestureDetector(
@@ -838,17 +972,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildActionButton(String label, VoidCallback onPressed) {
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Theme.of(context).colorScheme.onPrimary,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      ),
-      child: Text(
-        label,
-        style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          elevation: 0,
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15),
+        ),
       ),
     );
   }

@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../core/theme/app_colors.dart';
 import '../widgets/custom_button.dart';
+import '../widgets/glass_card.dart';
+import '../widgets/premium_screen_stack.dart';
 import '../utils/movie_catalog_utils.dart';
 import 'movie_details_screen.dart';
 import '../services/showtime_service.dart';
@@ -131,96 +134,111 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
     final prov = context.watch<MovieProvider>();
 
     if (prov.awaitingCatalogueUi) {
+      final scheme = Theme.of(context).colorScheme;
       return Scaffold(
+        backgroundColor: Colors.transparent,
         appBar: AppBar(
+          backgroundColor: scheme.surface.withValues(alpha: 0.82),
+          foregroundColor: scheme.onSurface,
+          elevation: 0,
           title: Text(
             widget.theatre['name'].toString(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
           ),
         ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text(
-                'Loading catalogue...',
-                style: GoogleFonts.outfit(fontSize: 15),
-              ),
-            ],
+        body: PremiumScreenStack(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text(
+                  'Loading catalogue...',
+                  style: GoogleFonts.outfit(
+                    fontSize: 15,
+                    color: scheme.onSurface,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
     }
 
+    final scheme = Theme.of(context).colorScheme;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
+        backgroundColor: scheme.surface.withValues(alpha: 0.82),
+        foregroundColor: scheme.onSurface,
+        elevation: 0,
         title: Text(
           widget.theatre['name'],
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
         ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+      body: PremiumScreenStack(
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(20, 24, 20, 28 + bottomInset),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                   // Theatre Info Card
-                  Container(
-                    width: double.infinity,
+                  GlassCard(
+                    borderRadius: 20,
                     padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.primary.withValues(alpha: 0.2),
-                          blurRadius: 15,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          widget.theatre['name'],
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.outfit(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onPrimaryContainer,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.theater_comedy_rounded,
+                              color: AppColors.cinemaGold,
+                              size: 28,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                widget.theatre['name'],
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.outfit(
+                                  color: scheme.onSurface,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 12),
                         Row(
                           children: [
                             Icon(
                               Icons.location_on_rounded,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onPrimaryContainer
-                                  .withValues(alpha: 0.7),
+                              color: scheme.onSurfaceVariant,
                               size: 18,
                             ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                widget.theatre['location'],
+                                '${widget.theatre['location']}',
                                 style: GoogleFonts.outfit(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onPrimaryContainer
-                                      .withValues(alpha: 0.9),
+                                  color: scheme.onSurfaceVariant,
                                   fontSize: 15,
+                                  height: 1.35,
                                 ),
                               ),
                             ),
@@ -321,89 +339,108 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
                         return Container(
                           height: 160,
                           decoration: BoxDecoration(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.surfaceContainerHighest,
+                            color: scheme.surface.withValues(alpha: 0.85),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.outlineVariant,
-                              width: 2,
+                              color: scheme.outlineVariant,
                             ),
-                          ),
-                          child: Row(
-                            children: [
-                              ClipRRect(
-                                borderRadius: const BorderRadius.only(
-                                  topLeft: Radius.circular(14),
-                                  bottomLeft: Radius.circular(14),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(
+                                  alpha: scheme.brightness == Brightness.dark
+                                      ? 0.35
+                                      : 0.06,
                                 ),
-                                child: _TheatreRowPoster(movie: movie),
-                              ),
-                              Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16.0),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        movie['title'] ?? 'Unknown Movie',
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: GoogleFonts.outfit(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          color: Theme.of(
-                                            context,
-                                          ).colorScheme.onSurface,
-                                          height: 1.1,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        '${movie['genre'] ?? 'Action'} • ${movie['duration'] == 0 ? 'N/A' : '${movie['duration']} mins'}',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: GoogleFonts.outfit(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                              .withValues(alpha: 0.6),
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 12),
-                                      CustomButton(
-                                        text: 'Book Now',
-                                        height: 36,
-                                        width: 140,
-                                        onPressed: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) =>
-                                                  MovieDetailsScreen(
-                                                    movie: MovieCatalogUtils
-                                                        .normalizeCustomerMovie(
-                                                      Map<String, dynamic>.from(
-                                                        movie,
-                                                      ),
-                                                    ),
-                                                    theatreName:
-                                                        widget.theatre['name'],
-                                                  ),
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                                blurRadius: 16,
+                                offset: const Offset(0, 8),
                               ),
                             ],
+                          ),
+                          child: LayoutBuilder(
+                            builder: (context, cardConstraints) {
+                              final narrowCard = cardConstraints.maxWidth < 340;
+                              return Row(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: const BorderRadius.only(
+                                      topLeft: Radius.circular(14),
+                                      bottomLeft: Radius.circular(14),
+                                    ),
+                                    child: _TheatreRowPoster(movie: movie),
+                                  ),
+                                  Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(16.0),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            movie['title'] ?? 'Unknown Movie',
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: GoogleFonts.outfit(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.onSurface,
+                                              height: 1.1,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            '${movie['genre'] ?? 'Action'} • ${movie['duration'] == 0 ? 'N/A' : '${movie['duration']} mins'}',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: GoogleFonts.outfit(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface
+                                                  .withValues(alpha: 0.6),
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          Align(
+                                            alignment: Alignment.centerLeft,
+                                            child: CustomButton(
+                                              text: 'Book Now',
+                                              height: 36,
+                                              width: narrowCard
+                                                  ? null
+                                                  : 140,
+                                              onPressed: () {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (_) =>
+                                                        MovieDetailsScreen(
+                                                          movie: MovieCatalogUtils
+                                                              .normalizeCustomerMovie(
+                                                            Map<String,
+                                                                    dynamic>.from(
+                                                              movie,
+                                                            ),
+                                                          ),
+                                                          theatreName:
+                                                              widget.theatre[
+                                                                  'name'],
+                                                        ),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
                         );
                       },
@@ -411,6 +448,7 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
                 ],
               ),
             ),
+      ),
     );
   }
 }

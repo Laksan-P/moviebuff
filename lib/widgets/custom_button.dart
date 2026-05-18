@@ -25,65 +25,71 @@ class CustomButton extends StatelessWidget {
     this.outlineColor,
   });
 
+  static const double _radius = 14;
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: width ?? double.infinity,
-      height: height ?? 48,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        color: isOutlined
-            ? Colors.transparent
-            : (color ?? Theme.of(context).colorScheme.primary),
-        border: isOutlined || outlineColor != null
-            ? Border.all(
-                color: outlineColor ?? Theme.of(context).colorScheme.primary,
-                width: 1.5,
-              )
-            : null,
-        boxShadow: !isOutlined && outlineColor == null && !isLoading
-            ? [
-                BoxShadow(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.shadow.withValues(alpha: 0.15),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ]
-            : null,
-      ),
-      child: ElevatedButton(
-        onPressed: isLoading ? null : onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.transparent,
-          shadowColor: Colors.transparent,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        width: width ?? double.infinity,
+        height: height ?? 52,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(_radius),
+          color: isOutlined
+              ? Colors.transparent
+              : (color ?? scheme.primary),
+          border: isOutlined || outlineColor != null
+              ? Border.all(
+                  color: outlineColor ?? scheme.primary,
+                  width: 1.5,
+                )
+              : null,
+          boxShadow: !isOutlined && outlineColor == null && !isLoading
+              ? [
+                  BoxShadow(
+                    color: scheme.primary.withValues(alpha: 0.28),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  ),
+                ]
+              : null,
         ),
-        child: isLoading
-            ? SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                  color: isOutlined
-                      ? Theme.of(context).colorScheme.primary
-                      : Theme.of(context).colorScheme.onPrimary,
-                  strokeWidth: 2,
+        child: ElevatedButton(
+          onPressed: isLoading ? null : onPressed,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            shadowColor: Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(_radius),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+          ),
+          child: isLoading
+              ? SizedBox(
+                  height: 22,
+                  width: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: isOutlined
+                        ? scheme.primary
+                        : scheme.onPrimary,
+                  ),
+                )
+              : Text(
+                  text,
+                  style: GoogleFonts.outfit(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.2,
+                    color: textColor ??
+                        (isOutlined
+                            ? scheme.primary
+                            : scheme.onPrimary),
+                  ),
                 ),
-              )
-            : Text(
-                text,
-                style: GoogleFonts.outfit(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color:
-                      textColor ??
-                      (isOutlined
-                          ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context).colorScheme.onPrimary),
-                ),
-              ),
+        ),
       ),
     );
   }

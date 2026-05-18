@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../providers/movie_provider.dart';
 import '../../services/admin_catalog_service.dart';
 import '../../services/movie_service.dart';
+import '../../widgets/premium_screen_stack.dart';
 
 class AdminMoviesScreen extends StatefulWidget {
   const AdminMoviesScreen({super.key});
@@ -597,15 +598,25 @@ class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Manage Movies')),
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        title: const Text('Manage Movies'),
+        backgroundColor: scheme.surface.withValues(alpha: 0.82),
+        foregroundColor: scheme.onSurface,
+        elevation: 0,
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _openMovieForm(),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        child: Icon(Icons.add, color: Theme.of(context).colorScheme.onPrimary),
+        backgroundColor: scheme.primary,
+        child: Icon(Icons.add, color: scheme.onPrimary),
       ),
-      body: Consumer<MovieProvider>(
-        builder: (context, prov, _) {
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      body: PremiumScreenStack(
+        child: Consumer<MovieProvider>(
+          builder: (context, prov, _) {
           return FutureBuilder<List<Map<String, dynamic>>>(
             future: AdminCatalogService.mergeMoviesForAdmin(prov.movies),
             builder: (context, snapshot) {
@@ -637,72 +648,137 @@ class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
                   itemBuilder: (context, index) {
                     final movie = movies[index];
                     return Container(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surface,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: const [
-                          BoxShadow(color: Colors.black12, blurRadius: 4),
+                        color: scheme.surface.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: scheme.outlineVariant),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(
+                              alpha: scheme.brightness == Brightness.dark
+                                  ? 0.28
+                                  : 0.05,
+                            ),
+                            blurRadius: 14,
+                            offset: const Offset(0, 6),
+                          ),
                         ],
                       ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _thumb(movie),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  movie['title']?.toString() ?? '',
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.outfit(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
-                                  ),
+                      child: LayoutBuilder(
+                        builder: (context, rowConstraints) {
+                          final narrow = rowConstraints.maxWidth < 380;
+                          final content = Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: _thumb(movie),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      movie['title']?.toString() ?? '',
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.outfit(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                        color: scheme.onSurface,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      movie['genre']?.toString() ?? '',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.outfit(
+                                        color: scheme.onSurfaceVariant,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  movie['genre']?.toString() ?? '',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.outfit(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurfaceVariant,
-                                    fontSize: 13,
-                                  ),
+                              ),
+                              if (!narrow)
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      tooltip: 'Edit',
+                                      constraints: const BoxConstraints(
+                                        minWidth: 40,
+                                        minHeight: 40,
+                                      ),
+                                      padding: EdgeInsets.zero,
+                                      icon: Icon(
+                                        Icons.edit_outlined,
+                                        color: scheme.primary,
+                                      ),
+                                      onPressed: () => _openMovieForm(movie),
+                                    ),
+                                    IconButton(
+                                      tooltip: 'Delete',
+                                      constraints: const BoxConstraints(
+                                        minWidth: 40,
+                                        minHeight: 40,
+                                      ),
+                                      padding: EdgeInsets.zero,
+                                      icon: Icon(
+                                        Icons.delete_outline_rounded,
+                                        color: scheme.error,
+                                      ),
+                                      onPressed: () => _confirmDelete(movie),
+                                    ),
+                                  ],
+                                ),
+                            ],
+                          );
+                          if (narrow) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                content,
+                                const SizedBox(height: 8),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    IconButton(
+                                      tooltip: 'Edit',
+                                      constraints: const BoxConstraints(
+                                        minWidth: 40,
+                                        minHeight: 40,
+                                      ),
+                                      padding: EdgeInsets.zero,
+                                      icon: Icon(
+                                        Icons.edit_outlined,
+                                        color: scheme.primary,
+                                      ),
+                                      onPressed: () => _openMovieForm(movie),
+                                    ),
+                                    IconButton(
+                                      tooltip: 'Delete',
+                                      constraints: const BoxConstraints(
+                                        minWidth: 40,
+                                        minHeight: 40,
+                                      ),
+                                      padding: EdgeInsets.zero,
+                                      icon: Icon(
+                                        Icons.delete_outline_rounded,
+                                        color: scheme.error,
+                                      ),
+                                      onPressed: () => _confirmDelete(movie),
+                                    ),
+                                  ],
                                 ),
                               ],
-                            ),
-                          ),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                constraints: const BoxConstraints(
-                                  minWidth: 40,
-                                  minHeight: 40,
-                                ),
-                                padding: EdgeInsets.zero,
-                                icon: const Icon(Icons.edit, color: Colors.blue),
-                                onPressed: () => _openMovieForm(movie),
-                              ),
-                              IconButton(
-                                constraints: const BoxConstraints(
-                                  minWidth: 40,
-                                  minHeight: 40,
-                                ),
-                                padding: EdgeInsets.zero,
-                                icon:
-                                    const Icon(Icons.delete, color: Colors.red),
-                                onPressed: () => _confirmDelete(movie),
-                              ),
-                            ],
-                          ),
-                        ],
+                            );
+                          }
+                          return content;
+                        },
                       ),
                     );
                   },
@@ -711,6 +787,7 @@ class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
             },
           );
         },
+        ),
       ),
     );
   }

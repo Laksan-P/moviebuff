@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../services/auth_service.dart';
 import '../services/local_db_service.dart';
 import '../widgets/custom_button.dart';
+import '../widgets/cinematic_background.dart';
 import 'cancel_booking_screen.dart';
 
 class MyBookingsScreen extends StatefulWidget {
@@ -64,16 +65,19 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     }).toList();
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: Text(
           'My Bookings',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+          style: GoogleFonts.outfit(fontWeight: FontWeight.w800, fontSize: 20),
+        ),
+        backgroundColor: Theme.of(context).colorScheme.surface.withValues(
+          alpha: 0.82,
         ),
         actions: [
           IconButton(
             tooltip: 'Refresh',
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh_rounded),
             onPressed: () {
               setState(() => _isLoading = true);
               _loadBookings();
@@ -82,25 +86,46 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
         ],
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: Theme.of(context).colorScheme.primary,
+          indicator: BoxDecoration(
+            borderRadius: BorderRadius.circular(11),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.16),
+          ),
+          indicatorSize: TabBarIndicatorSize.tab,
+          indicatorPadding: const EdgeInsets.fromLTRB(8, 10, 8, 10),
+          dividerColor: Colors.transparent,
           labelColor: Theme.of(context).colorScheme.primary,
-          unselectedLabelColor: Colors.white70,
-          labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+          unselectedLabelColor: Theme.of(
+            context,
+          ).colorScheme.onSurface.withValues(alpha: 0.5),
+          labelStyle: GoogleFonts.outfit(
+            fontWeight: FontWeight.w800,
+            fontSize: 12,
+          ),
+          unselectedLabelStyle: GoogleFonts.outfit(
+            fontWeight: FontWeight.w600,
+            fontSize: 12,
+          ),
           tabs: [
-            Tab(text: 'Active Bookings (${activeBookings.length})'),
+            Tab(text: 'Active (${activeBookings.length})'),
             Tab(text: 'Cancelled (${cancelledBookings.length})'),
           ],
         ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : TabBarView(
-              controller: _tabController,
-              children: [
-                _buildBookingList(activeBookings, false),
-                _buildBookingList(cancelledBookings, true),
-              ],
-            ),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          const CinematicBackground(),
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildBookingList(activeBookings, false),
+                    _buildBookingList(cancelledBookings, true),
+                  ],
+                ),
+        ],
+      ),
     );
   }
 
@@ -158,17 +183,19 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     final statusLower = status.toLowerCase();
     final bool isCancelled =
         statusLower == 'cancelled' || statusLower == 'cancellation requested';
+    final scheme = Theme.of(context).colorScheme;
 
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.secondaryContainer,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
+        color: scheme.surface.withValues(alpha: 0.92),
+        border: Border.all(color: scheme.outline.withValues(alpha: 0.2)),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.07),
+            blurRadius: 22,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -181,7 +208,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             overflow: TextOverflow.ellipsis,
             style: GoogleFonts.outfit(
               fontSize: 22,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w800,
+              height: 1.15,
               color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
@@ -202,8 +230,11 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(12),
+              color: scheme.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: scheme.outline.withValues(alpha: 0.15),
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -212,18 +243,21 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                   'TOTAL AMOUNT',
                   style: GoogleFonts.outfit(
                     fontSize: 10,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSecondaryContainer.withValues(alpha: 0.6),
-                    fontWeight: FontWeight.bold,
+                    color: scheme.onSurface.withValues(alpha: 0.55),
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1,
                   ),
                 ),
-                Text(
-                  'LKR ${booking['amount'] ?? '0.00'}',
-                  style: GoogleFonts.outfit(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSecondaryContainer,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'LKR ${booking['amount'] ?? '0.00'}',
+                    style: GoogleFonts.outfit(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: scheme.onSurface,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 8),
