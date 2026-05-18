@@ -26,7 +26,7 @@ class AppConfig {
   /// When set to a valid `http(s)` URL, the app fetches this list first, then
   /// falls back to **sqflite cache**, then **bundled** [localMoviesAsset].
   static const String externalMoviesUrl =
-      'https://raw.githubusercontent.com/Laksan-P/moviebuff/refs/heads/main/external_movies.json';
+      'https://raw.githubusercontent.com/Laksan-P/moviebuff/main/external_movies.json';
 
   /// Local bundled asset used as offline fallback when the network is down
   /// or the external URL is unreachable.
