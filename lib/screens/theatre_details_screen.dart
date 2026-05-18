@@ -20,22 +20,22 @@ class TheatreDetailsScreen extends StatefulWidget {
 class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
   List<Map<String, dynamic>> _movies = [];
   bool _isLoading = true;
-  bool _hasLoadedOnce = false;
+  int? _lastScheduledMoviesToken;
 
-  @override
-  void initState() {
-    super.initState();
+  void _maybeScheduleLoad(MovieProvider prov) {
+    if (!mounted || prov.awaitingCatalogueUi) return;
+    final token = identityHashCode(prov.movies);
+    if (_lastScheduledMoviesToken == token) return;
+    _lastScheduledMoviesToken = token;
     _loadMovies();
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Reload data when returning to this screen
-    if (_hasLoadedOnce && mounted) {
-      _loadMovies();
-    }
-    _hasLoadedOnce = true;
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _maybeScheduleLoad(context.read<MovieProvider>());
+    });
   }
 
   Future<void> _loadMovies() async {
@@ -106,6 +106,37 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final prov = context.watch<MovieProvider>();
+
+    if (prov.awaitingCatalogueUi) {
+      _lastScheduledMoviesToken = null;
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(
+            widget.theatre['name'].toString(),
+            style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+          ),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                'Loading catalogue...',
+                style: GoogleFonts.outfit(fontSize: 15),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _maybeScheduleLoad(prov);
+    });
+
     return Scaffold(
       appBar: AppBar(
         title: Text(

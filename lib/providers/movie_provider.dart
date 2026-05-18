@@ -12,6 +12,8 @@ class MovieProvider extends ChangeNotifier {
   DateTime? _fetchedAt;
   String? _statusMessage;
   bool _loading = false;
+  /// False until the first [load] / [refreshAfterAdminEdit] merge completes.
+  bool _catalogueReady = false;
 
   List<Map<String, dynamic>> get movies => _movies;
   List<Map<String, dynamic>> get favorites => _favorites;
@@ -19,6 +21,21 @@ class MovieProvider extends ChangeNotifier {
   DateTime? get fetchedAt => _fetchedAt;
   String? get statusMessage => _statusMessage;
   bool get loading => _loading;
+
+  bool get catalogueReady => _catalogueReady;
+
+  /// Customer screens should not show catalogue-derived lists while this is true.
+  bool get awaitingCatalogueUi => !_catalogueReady || _loading;
+
+  Future<void> _logCatalogueReadyStats() async {
+    final theatres =
+        await CustomerCatalogService.mergeCustomerTheatres(_movies);
+    final showtimes = await ShowtimeService.getCustomerShowtimes(_movies);
+    debugPrint(
+      '✅ CATALOGUE - Merged catalogue ready: ${_movies.length} movies, '
+      '${theatres.length} theatres, ${showtimes.length} showtimes',
+    );
+  }
 
   String get sourceLabel {
     switch (_source) {
@@ -32,7 +49,10 @@ class MovieProvider extends ChangeNotifier {
   }
 
   Future<void> load({bool forceRefresh = false}) async {
+    debugPrint('🔄 CATALOGUE - Loading merged catalogue');
     _loading = true;
+    _catalogueReady = false;
+    _movies = [];
     notifyListeners();
 
     final result = await ExternalMovieService.fetchMovies(
@@ -52,6 +72,9 @@ class MovieProvider extends ChangeNotifier {
     final favs = await LocalDbService.getFavorites();
     _favorites = favs;
 
+    await _logCatalogueReadyStats();
+
+    _catalogueReady = true;
     _loading = false;
     debugPrint(
       '🎞️ MOVIE PROVIDER - ${_movies.length} movies ($_source), ${_favorites.length} favorites',
@@ -85,6 +108,11 @@ class MovieProvider extends ChangeNotifier {
 
   /// Re-merge local admin prefs with last external fetch (no forced network).
   Future<void> refreshAfterAdminEdit() async {
+    debugPrint('🔄 CATALOGUE - Loading merged catalogue');
+    _loading = true;
+    _catalogueReady = false;
+    notifyListeners();
+
     final result = await ExternalMovieService.fetchMovies(
       forceRefresh: false,
     );
@@ -94,9 +122,12 @@ class MovieProvider extends ChangeNotifier {
     await ShowtimeService.initShowtimes(
       applySem1Templates: !_catalogueStyleMovies(_movies),
     );
-    debugPrint(
-      '🔄 CUSTOMER CATALOGUE - Refreshed after admin changes',
-    );
+
+    await _logCatalogueReadyStats();
+
+    _catalogueReady = true;
+    _loading = false;
+    debugPrint('🔄 CATALOGUE - Refreshed after admin CRUD');
     notifyListeners();
   }
 }

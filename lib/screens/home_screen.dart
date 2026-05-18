@@ -13,7 +13,6 @@ import 'profile_screen.dart';
 import 'device_screen.dart';
 import '../services/auth_service.dart';
 import '../services/external_movie_service.dart';
-import '../services/movie_service.dart';
 import '../providers/movie_provider.dart';
 import '../utils/movie_catalog_utils.dart';
 import '../widgets/app_logo.dart';
@@ -29,7 +28,6 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentSliderIndex = 0;
   int _bottomNavIndex = 0;
   String? _userName;
-  List<Map<String, dynamic>> _sliderMovies = [];
   final CarouselSliderController _carouselController =
       CarouselSliderController();
 
@@ -41,13 +39,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadInitialData() async {
     final name = await AuthService.getUserName();
-    // Local seed data is still used as a backup for the carousel until the
-    // external JSON arrives (see MovieProvider listener in build()).
-    final movies = await MovieService.getMovies();
     if (mounted) {
       setState(() {
         _userName = name;
-        _sliderMovies = movies.take(3).toList();
       });
     }
   }
@@ -146,11 +140,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildHomeContent() {
     final movieProv = context.watch<MovieProvider>();
-    // Prefer movies from the external JSON, fall back to the local seed.
-    final externalMovies = movieProv.movies;
-    final sliderSource = externalMovies.isNotEmpty
-        ? externalMovies.take(3).toList()
-        : _sliderMovies;
+    final waiting = movieProv.awaitingCatalogueUi;
+    final mergedMovies = movieProv.movies;
+    final sliderSource =
+        waiting ? <Map<String, dynamic>>[] : mergedMovies.take(3).toList();
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -284,6 +277,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           _buildCarousel(
                             height: isWide ? 500 : 400,
                             movies: sliderSource,
+                            catalogueLoading: waiting,
                           ),
                         ],
                       ),
@@ -425,11 +419,32 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildCarousel({
     required double height,
     required List<Map<String, dynamic>> movies,
+    required bool catalogueLoading,
   }) {
-    if (movies.isEmpty) {
+    if (catalogueLoading || movies.isEmpty) {
       return SizedBox(
         height: height,
-        child: const Center(child: CircularProgressIndicator()),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                catalogueLoading
+                    ? 'Loading catalogue...'
+                    : 'No movies to display yet',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.outfit(
+                  fontSize: 15,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+              ),
+            ],
+          ),
+        ),
       );
     }
     return Stack(
@@ -688,6 +703,33 @@ class _HomeScreenState extends State<HomeScreen> {
     bool isWide,
     bool narrow,
   ) {
+    if (prov.awaitingCatalogueUi) {
+      final headerColor = Theme.of(context).colorScheme.onSurface;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Live Catalogue',
+            style: GoogleFonts.outfit(
+              fontSize: isWide ? 32 : (narrow ? 20 : 22),
+              fontWeight: FontWeight.bold,
+              color: headerColor,
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Center(
+            child: Column(
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 12),
+                Text('Loading catalogue...'),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
     final movies = prov.movies;
     final headerColor = Theme.of(context).colorScheme.onSurface;
     final mutedColor = headerColor.withValues(alpha: 0.6);
@@ -757,14 +799,14 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             IconButton(
               tooltip: 'Refresh from internet',
-              icon: prov.loading
+              icon: prov.awaitingCatalogueUi
                   ? const SizedBox(
                       width: 18,
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.refresh),
-              onPressed: prov.loading
+              onPressed: prov.awaitingCatalogueUi
                   ? null
                   : () async {
                       await prov.load(forceRefresh: true);
@@ -787,9 +829,17 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(height: 16),
         if (movies.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 32),
-            child: Center(child: CircularProgressIndicator()),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 32),
+            child: Center(
+              child: Text(
+                'No movies in the catalogue right now.',
+                style: GoogleFonts.outfit(
+                  fontSize: 15,
+                  color: mutedColor,
+                ),
+              ),
+            ),
           )
         else
           SizedBox(

@@ -27,28 +27,28 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
 
   List<Map<String, dynamic>> allShowtimes = [];
   bool _isloadingShowtimes = true;
-  bool _hasLoadedOnce = false;
+  int? _lastScheduledMoviesToken;
 
   /// Normalized customer movie (posterUrl → image, etc.).
   late Map<String, dynamic> _movie;
+
+  void _maybeScheduleShowtimes(MovieProvider prov) {
+    if (!mounted || prov.awaitingCatalogueUi) return;
+    final token = identityHashCode(prov.movies);
+    if (_lastScheduledMoviesToken == token) return;
+    _lastScheduledMoviesToken = token;
+    _loadShowtimes();
+  }
 
   @override
   void initState() {
     super.initState();
     _movie = MovieCatalogUtils.normalizeCustomerMovie(widget.movie);
     _initializeSelectedDate();
-    _loadShowtimes();
     debugPrint('🎬 MOVIE DETAILS - Received Movie Data: $_movie');
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Reload data when returning to this screen
-    if (_hasLoadedOnce && mounted) {
-      _loadShowtimes();
-    }
-    _hasLoadedOnce = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _maybeScheduleShowtimes(context.read<MovieProvider>());
+    });
   }
 
   void _initializeSelectedDate() {
@@ -214,6 +214,37 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final mp = context.watch<MovieProvider>();
+
+    if (mp.awaitingCatalogueUi) {
+      _lastScheduledMoviesToken = null;
+      return Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        appBar: AppBar(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          foregroundColor: Theme.of(context).colorScheme.onSurface,
+          elevation: 0,
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                'Loading catalogue...',
+                style: GoogleFonts.outfit(fontSize: 15),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _maybeScheduleShowtimes(mp);
+    });
+
     final cast = [
       {'name': 'Actor 1', 'role': 'Role 1'},
       {'name': 'Actor 2', 'role': 'Role 2'},

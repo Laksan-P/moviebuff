@@ -19,7 +19,8 @@ Future<void> main() async {
   // Seed local storage on first run (existing behaviour, untouched).
   await MovieService.initMovies();
   await TheatreService.initTheatres();
-  await ShowtimeService.initShowtimes();
+  // Avoid injecting Sem 1 template showtimes before MovieProvider merges catalogue.
+  await ShowtimeService.initShowtimes(applySem1Templates: false);
 
   // Create providers, hydrate the ones that need it before runApp.
   final themeProvider = ThemeProvider();

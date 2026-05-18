@@ -28,6 +28,21 @@ class _TheatresScreenState extends State<TheatresScreen> {
       ),
       body: Consumer<MovieProvider>(
         builder: (context, prov, _) {
+          if (prov.awaitingCatalogueUi) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Loading catalogue...',
+                    style: GoogleFonts.outfit(fontSize: 15),
+                  ),
+                ],
+              ),
+            );
+          }
           return FutureBuilder<List<Map<String, dynamic>>>(
             future: CustomerCatalogService.mergeCustomerTheatres(prov.movies),
             builder: (context, snapshot) {
