@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/booking_service.dart';
+import '../utils/text_safety.dart';
 
 class CancelBookingScreen extends StatefulWidget {
   final Map<String, dynamic> booking;
@@ -209,7 +210,7 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
           const SizedBox(height: 12),
           _buildDetailRow(
             'Booking ID',
-            '#${widget.booking['id'].toString().substring(widget.booking['id'].toString().length - 6)}',
+            TextSafety.safeBookingIdSuffix(widget.booking['id']),
           ),
 
           const SizedBox(height: 32),

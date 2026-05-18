@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../utils/movie_catalog_utils.dart';
+
 class ShowtimeService {
   static const String _showtimesKey = 'app_showtimes_v4'; // Relative dates v4
 
@@ -289,5 +291,54 @@ class ShowtimeService {
       debugPrint('⏰ TIME ERROR ($timeStr, $dateStr): $e');
       return false;
     }
+  }
+
+  /// Synthetic showtimes for external-catalog movies (7 days × JSON or default slots).
+  static List<Map<String, dynamic>> buildExternalCatalogShowtimes(
+    Map<String, dynamic> movie,
+  ) {
+    final title = movie['title']?.toString() ?? 'Movie';
+    final theatreRaw = movie['theatre']?.toString().trim() ?? '';
+    final theatre = theatreRaw.isNotEmpty
+        ? theatreRaw
+        : MovieCatalogUtils.defaultExternalTheatre;
+
+    List<String> times;
+    final raw = movie['showtimes'];
+    if (raw is List && raw.isNotEmpty) {
+      times = raw.map((e) => e.toString()).toList();
+    } else {
+      times = List<String>.from(MovieCatalogUtils.defaultExternalShowtimes);
+    }
+
+    final price = MovieCatalogUtils.priceFromMovie(movie);
+    var fmt = '2D';
+    final fmts = movie['formats'];
+    if (fmts is List && fmts.isNotEmpty) fmt = fmts.first.toString();
+    var lang = 'English';
+    final langs = movie['languages'];
+    if (langs is List && langs.isNotEmpty) lang = langs.first.toString();
+
+    final now = DateTime.now();
+    final out = <Map<String, dynamic>>[];
+    for (var d = 0; d < 7; d++) {
+      final showDate = now.add(Duration(days: d));
+      final dateStr =
+          '${showDate.year}-${showDate.month.toString().padLeft(2, '0')}-${showDate.day.toString().padLeft(2, '0')}';
+      for (var i = 0; i < times.length; i++) {
+        out.add({
+          'id': 'extcat_${title.hashCode}_${d}_$i',
+          'time': times[i],
+          'label': fmt,
+          'language': lang,
+          'format': fmt,
+          'date': dateStr,
+          'theatre': theatre,
+          'movie': title,
+          'price': price,
+        });
+      }
+    }
+    return out;
   }
 }

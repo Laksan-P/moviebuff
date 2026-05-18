@@ -11,6 +11,7 @@ import '../../services/movie_service.dart';
 import '../../services/theatre_service.dart';
 import '../login_screen.dart';
 import '../../core/theme/app_colors.dart';
+import '../../utils/text_safety.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -431,7 +432,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ..._theatres.take(3).map((t) {
             return Column(
               children: [
-                _buildListItem(t['name'] as String, t['location'] as String),
+                _buildListItem(
+                  TextSafety.safeShortText(t['name']?.toString(), 200,
+                      fallback: 'Theatre',),
+                  TextSafety.safeShortText(t['location']?.toString(), 240,
+                      fallback: 'N/A',),
+                ),
                 const SizedBox(height: 16),
               ],
             );
@@ -510,8 +516,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             return Column(
               children: [
                 _buildListItem(
-                  m['title'] ?? 'Unknown Movie',
-                  m['genre'] ?? 'N/A',
+                  TextSafety.safeShortText(
+                      m['title']?.toString(), 200,
+                      fallback: 'Unknown Movie',),
+                  TextSafety.safeShortText(
+                      m['genre']?.toString(), 120,
+                      fallback: 'N/A',),
                 ),
                 const SizedBox(height: 16),
               ],
@@ -613,8 +623,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
                 // Data Rows
                 ..._bookings.take(5).map((booking) {
-                  final id =
-                      '#${(booking['id'] as String).substring(booking['id'].length - 6)}';
+                  final id = TextSafety.safeBookingIdSuffix(booking['id']);
                   final name = (booking['name'] ?? 'User').toString();
                   final email = (booking['email'] ?? 'Unknown').toString();
                   final movie = (booking['movie'] ?? 'Unknown').toString();

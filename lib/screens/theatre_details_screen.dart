@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+
 import '../widgets/custom_button.dart';
+import '../utils/movie_catalog_utils.dart';
 import 'movie_details_screen.dart';
 import '../services/movie_service.dart';
 import '../services/showtime_service.dart';
+import '../providers/movie_provider.dart';
 
 class TheatreDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> theatre;
@@ -38,44 +42,59 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
   Future<void> _loadMovies() async {
     setState(() => _isLoading = true);
 
-    final movies = await MovieService.getMovies();
+    final movieProv = context.read<MovieProvider>();
+    final local = await MovieService.getMovies();
+    final merged = MovieCatalogUtils.mergeCustomerMovieLists(
+      movieProv.movies,
+      local,
+    );
     final allShowtimes = await ShowtimeService.getShowtimes();
+
+    final targetTheatre = (widget.theatre['name'] as String).trim();
 
     debugPrint(
       '🎭 THEATRE DETAILS - Loading showtimes for: ${widget.theatre['name']}',
     );
     debugPrint('🎭 Total showtimes in system: ${allShowtimes.length}');
 
-    // Filter movies that have showtimes at THIS theatre
-    // AND at least one showtime is in the future
-    final filteredMovies = movies.where((movie) {
-      final movieTitle = (movie['title'] as String).trim().toLowerCase();
-      final targetTheatre = (widget.theatre['name'] as String)
-          .trim()
-          .toLowerCase();
+    bool movieBelongsToTheatre(Map<String, dynamic> movie) {
+      final assigned = (movie['theatre'] as String? ?? '').trim();
+      if (assigned.isNotEmpty) {
+        return MovieCatalogUtils.theatresLooselyMatch(assigned, targetTheatre);
+      }
+      return MovieCatalogUtils.theatresLooselyMatch(
+        MovieCatalogUtils.defaultExternalTheatre,
+        targetTheatre,
+      );
+    }
 
-      // Check if movie is explicitly assigned to this theatre
-      final assignedTheatre = (movie['theatre'] as String? ?? '')
-          .trim()
-          .toLowerCase();
-      bool isAssignedToThisTheatre = assignedTheatre == targetTheatre;
+    final filteredMovies = merged.where((movie) {
+      final movieTitle = (movie['title'] as String).trim().toLowerCase();
+
+      if (!movieBelongsToTheatre(movie)) return false;
 
       final movieShowtimes = allShowtimes.where((st) {
         final stMovie = (st['movie'] as String? ?? '').trim().toLowerCase();
-        final stTheatre = (st['theatre'] as String? ?? '').trim().toLowerCase();
-        return stMovie == movieTitle && stTheatre == targetTheatre;
+        final stTheatre = (st['theatre'] as String? ?? '').trim();
+        return stMovie == movieTitle &&
+            MovieCatalogUtils.theatresLooselyMatch(stTheatre, targetTheatre);
       });
 
-      // Show if it belongs to this theatre OR has showtimes here
-      if (isAssignedToThisTheatre) return true;
-      if (movieShowtimes.isEmpty) return false;
+      if (movieShowtimes.isNotEmpty) {
+        return movieShowtimes.any(
+          (st) => !ShowtimeService.isShowtimePassed(st['time'], st['date']),
+        );
+      }
 
-      // Check if at least one showtime is in the future
-      bool hasUpcoming = movieShowtimes.any((st) {
-        return !ShowtimeService.isShowtimePassed(st['time'], st['date']);
-      });
-
-      return hasUpcoming;
+      final synthetic = ShowtimeService.buildExternalCatalogShowtimes(movie);
+      return synthetic.any(
+        (st) =>
+            !ShowtimeService.isShowtimePassed(st['time'], st['date']) &&
+            MovieCatalogUtils.theatresLooselyMatch(
+              st['theatre']?.toString() ?? '',
+              targetTheatre,
+            ),
+      );
     }).toList();
 
     debugPrint('🎭 Filtered movies for this theatre: ${filteredMovies.length}');
@@ -275,53 +294,7 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
                                   topLeft: Radius.circular(14),
                                   bottomLeft: Radius.circular(14),
                                 ),
-                                child:
-                                    movie['image'] != null &&
-                                        movie['image']!.startsWith('http')
-                                    ? Image.network(
-                                        movie['image']!,
-                                        width: 110,
-                                        height: 160,
-                                        fit: BoxFit.cover,
-                                        errorBuilder:
-                                            (context, error, stackTrace) {
-                                              return Container(
-                                                width: 110,
-                                                height: 160,
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .surfaceContainerHighest,
-                                                child: Icon(
-                                                  Icons.image_not_supported,
-                                                  color: Theme.of(
-                                                    context,
-                                                  ).colorScheme.outline,
-                                                ),
-                                              );
-                                            },
-                                      )
-                                    : Image.asset(
-                                        movie['image'] ?? '',
-                                        width: 110,
-                                        height: 160,
-                                        fit: BoxFit.cover,
-                                        errorBuilder:
-                                            (context, error, stackTrace) {
-                                              return Container(
-                                                width: 110,
-                                                height: 160,
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .surfaceContainerHighest,
-                                                child: Icon(
-                                                  Icons.image_not_supported,
-                                                  color: Theme.of(
-                                                    context,
-                                                  ).colorScheme.outline,
-                                                ),
-                                              );
-                                            },
-                                      ),
+                                child: _TheatreRowPoster(movie: movie),
                               ),
                               Expanded(
                                 child: Padding(
@@ -368,7 +341,12 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
                                             MaterialPageRoute(
                                               builder: (_) =>
                                                   MovieDetailsScreen(
-                                                    movie: movie,
+                                                    movie: MovieCatalogUtils
+                                                        .normalizeCustomerMovie(
+                                                      Map<String, dynamic>.from(
+                                                        movie,
+                                                      ),
+                                                    ),
                                                     theatreName:
                                                         widget.theatre['name'],
                                                   ),
@@ -388,6 +366,115 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
                 ],
               ),
             ),
+    );
+  }
+}
+
+class _TheatreRowPoster extends StatefulWidget {
+  const _TheatreRowPoster({required this.movie});
+
+  final Map<String, dynamic> movie;
+
+  @override
+  State<_TheatreRowPoster> createState() => _TheatreRowPosterState();
+}
+
+class _TheatreRowPosterState extends State<_TheatreRowPoster> {
+  late final List<String> _urls;
+  int _index = 0;
+
+  static String? _httpUrl(dynamic v) {
+    final t = v?.toString().trim() ?? '';
+    if (t.isEmpty || t == 'null') return null;
+    if (t.startsWith('http')) return t;
+    return null;
+  }
+
+  String get _title => widget.movie['title']?.toString() ?? 'Movie';
+
+  @override
+  void initState() {
+    super.initState();
+    final img = _httpUrl(widget.movie['image']);
+    final poster = _httpUrl(widget.movie['posterUrl']);
+    _urls = [];
+    if (img != null) _urls.add(img);
+    if (poster != null && poster != img) _urls.add(poster);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const w = 110.0;
+    const h = 160.0;
+
+    if (_index < _urls.length) {
+      final url = _urls[_index];
+      return Image.network(
+        url,
+        key: ValueKey<String>(url),
+        width: w,
+        height: h,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          MovieCatalogUtils.logPosterLoadFailed(_title, error);
+          final next = _index + 1;
+          if (next < _urls.length) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) setState(() => _index = next);
+            });
+          }
+          return _placeholder(context, w, h);
+        },
+      );
+    }
+
+    final asset = widget.movie['image']?.toString() ?? '';
+    if (asset.isNotEmpty && !asset.startsWith('http')) {
+      return Image.asset(
+        asset,
+        width: w,
+        height: h,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          MovieCatalogUtils.logPosterLoadFailed(_title, error);
+          return _placeholder(context, w, h);
+        },
+      );
+    }
+
+    return _placeholder(context, w, h);
+  }
+
+  Widget _placeholder(BuildContext context, double w, double h) {
+    return Container(
+      width: w,
+      height: h,
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      padding: const EdgeInsets.all(6),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.movie_outlined,
+            size: 28,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurfaceVariant.withValues(alpha: 0.45),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _title,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.outfit(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

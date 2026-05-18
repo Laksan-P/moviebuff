@@ -11,6 +11,8 @@ class BookingScreen extends StatefulWidget {
   final String theatreName;
   final String selectedFormat;
   final String selectedLanguage;
+  /// Per-seat price from showtime / external JSON (defaults to 750).
+  final double ticketPrice;
 
   const BookingScreen({
     super.key,
@@ -20,6 +22,7 @@ class BookingScreen extends StatefulWidget {
     required this.theatreName,
     this.selectedFormat = '2D',
     this.selectedLanguage = 'English',
+    this.ticketPrice = 750.0,
   });
 
   @override
@@ -50,8 +53,7 @@ class _BookingScreenState extends State<BookingScreen> {
     });
   }
 
-  final double _pricePerSeat = 750.0;
-  final double _bookingFee = 0.0;
+  double get _pricePerSeat => widget.ticketPrice;
 
   void _toggleSeat(String seat) {
     if (_bookedSeats.contains(seat)) return; // If seat is booked, do nothing
@@ -75,6 +77,8 @@ class _BookingScreenState extends State<BookingScreen> {
       '💰 BOOKING TOTAL: seats=${_selectedSeats.length}, ticketPrice=$_pricePerSeat, subtotal=${subtotal.toStringAsFixed(2)}, fees=${_bookingFee.toStringAsFixed(2)}, total=${total.toStringAsFixed(2)}',
     );
   }
+
+  static const double _bookingFee = 0.0;
 
   @override
   Widget build(BuildContext context) {

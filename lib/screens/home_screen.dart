@@ -15,6 +15,7 @@ import '../services/auth_service.dart';
 import '../services/external_movie_service.dart';
 import '../services/movie_service.dart';
 import '../providers/movie_provider.dart';
+import '../utils/movie_catalog_utils.dart';
 import '../widgets/app_logo.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -449,10 +450,13 @@ class _HomeScreenState extends State<HomeScreen> {
           items: movies.map((movie) {
             return GestureDetector(
               onTap: () {
+                final normalized = MovieCatalogUtils.normalizeCustomerMovie(
+                  Map<String, dynamic>.from(movie),
+                );
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => MovieDetailsScreen(movie: movie),
+                    builder: (_) => MovieDetailsScreen(movie: normalized),
                   ),
                 );
               },
@@ -464,46 +468,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    // Network or Asset Image
-                    movie['image'] != null && movie['image']!.startsWith('http')
-                        ? Image.network(
-                            movie['image']!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.surfaceContainerHighest,
-                                child: Icon(
-                                  Icons.broken_image,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant
-                                      .withValues(alpha: 0.3),
-                                  size: 48,
-                                ),
-                              );
-                            },
-                          )
-                        : Image.asset(
-                            movie['image'] ?? '',
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.surfaceContainerHighest,
-                                child: Icon(
-                                  Icons.movie,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant
-                                      .withValues(alpha: 0.3),
-                                  size: 48,
-                                ),
-                              );
-                            },
-                          ),
+                    // Network (image → posterUrl via normalize) or asset fallback
+                    _carouselPoster(context, movie),
                     // Gradient Overlay
                     Container(
                       decoration: BoxDecoration(
@@ -656,6 +622,14 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ],
     );
+  }
+
+  Widget _carouselPoster(BuildContext context, Map<String, dynamic> movie) {
+    return _HomeCatalogPoster(movie: movie, boxFit: BoxFit.cover);
+  }
+
+  Widget _cataloguePosterTile(BuildContext context, Map<String, dynamic> m) {
+    return _HomeCatalogPoster(movie: m, boxFit: BoxFit.cover);
   }
 
   Widget _buildNavItem(
@@ -829,10 +803,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 final isFav = prov.isFavorite(m['title']?.toString() ?? '');
                 return GestureDetector(
                   onTap: () {
+                    final normalized = MovieCatalogUtils.normalizeCustomerMovie(
+                      Map<String, dynamic>.from(m),
+                    );
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => MovieDetailsScreen(movie: m),
+                        builder: (_) =>
+                            MovieDetailsScreen(movie: normalized),
                       ),
                     );
                   },
@@ -852,24 +830,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Stack(
                             fit: StackFit.expand,
                             children: [
-                              (m['image'] != null &&
-                                      m['image'].toString().startsWith('http'))
-                                  ? Image.network(
-                                      m['image'],
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => Container(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .surfaceContainerHighest,
-                                        child: const Icon(Icons.movie),
-                                      ),
-                                    )
-                                  : Container(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .surfaceContainerHighest,
-                                      child: const Icon(Icons.movie),
-                                    ),
+                              _cataloguePosterTile(context, m),
                               Positioned(
                                 top: 4,
                                 right: 4,
@@ -977,6 +938,117 @@ class _HomeScreenState extends State<HomeScreen> {
               color: Theme.of(
                 context,
               ).colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Prefer `image`, then `posterUrl` on network failure; then local asset; then placeholder.
+class _HomeCatalogPoster extends StatefulWidget {
+  const _HomeCatalogPoster({
+    required this.movie,
+    required this.boxFit,
+  });
+
+  final Map<String, dynamic> movie;
+  final BoxFit boxFit;
+
+  @override
+  State<_HomeCatalogPoster> createState() => _HomeCatalogPosterState();
+}
+
+class _HomeCatalogPosterState extends State<_HomeCatalogPoster> {
+  late final List<String> _urls;
+  int _index = 0;
+
+  static String? _httpUrl(dynamic v) {
+    final t = v?.toString().trim() ?? '';
+    if (t.isEmpty || t == 'null') return null;
+    if (t.startsWith('http')) return t;
+    return null;
+  }
+
+  String get _title => widget.movie['title']?.toString() ?? 'Movie';
+
+  @override
+  void initState() {
+    super.initState();
+    final img = _httpUrl(widget.movie['image']);
+    final poster = _httpUrl(widget.movie['posterUrl']);
+    _urls = [];
+    if (img != null) _urls.add(img);
+    if (poster != null && poster != img) _urls.add(poster);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_index < _urls.length) {
+      final url = _urls[_index];
+      return Image.network(
+        url,
+        key: ValueKey<String>(url),
+        fit: widget.boxFit,
+        width: double.infinity,
+        height: double.infinity,
+        errorBuilder: (context, error, stackTrace) {
+          MovieCatalogUtils.logPosterLoadFailed(_title, error);
+          final next = _index + 1;
+          if (next < _urls.length) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) setState(() => _index = next);
+            });
+          }
+          return _placeholder(context);
+        },
+      );
+    }
+
+    final asset = widget.movie['image']?.toString() ?? '';
+    if (asset.isNotEmpty && !asset.startsWith('http')) {
+      return Image.asset(
+        asset,
+        fit: widget.boxFit,
+        width: double.infinity,
+        height: double.infinity,
+        errorBuilder: (context, error, stackTrace) {
+          MovieCatalogUtils.logPosterLoadFailed(_title, error);
+          return _placeholder(context);
+        },
+      );
+    }
+
+    return _placeholder(context);
+  }
+
+  Widget _placeholder(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      padding: const EdgeInsets.all(8),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.movie_outlined,
+            size: 32,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurfaceVariant.withValues(alpha: 0.45),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.outfit(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
         ],

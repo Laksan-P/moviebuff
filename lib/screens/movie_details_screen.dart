@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'booking_screen.dart';
 import '../services/showtime_service.dart';
+import '../utils/movie_catalog_utils.dart';
 
 class MovieDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> movie;
@@ -26,12 +27,16 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
   bool _isloadingShowtimes = true;
   bool _hasLoadedOnce = false;
 
+  /// Normalized customer movie (posterUrl → image, etc.).
+  late Map<String, dynamic> _movie;
+
   @override
   void initState() {
     super.initState();
+    _movie = MovieCatalogUtils.normalizeCustomerMovie(widget.movie);
     _initializeSelectedDate();
     _loadShowtimes();
-    debugPrint('🎬 MOVIE DETAILS - Received Movie Data: ${widget.movie}');
+    debugPrint('🎬 MOVIE DETAILS - Received Movie Data: $_movie');
   }
 
   @override
@@ -56,7 +61,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
     debugPrint(
       '🎬 MOVIE DETAILS - Total showtimes loaded: ${showtimes.length}',
     );
-    debugPrint('🎬 Looking for showtimes for movie: ${widget.movie['title']}');
+    debugPrint('🎬 Looking for showtimes for movie: ${_movie['title']}');
 
     if (mounted) {
       setState(() {
@@ -97,71 +102,67 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
     return dates;
   }
 
+  bool _matchesShowtimeFilters(Map<String, dynamic> st) {
+    final stMovie = (st['movie'] as String? ?? '').trim().toLowerCase();
+    final targetMovie = (_movie['title'] as String).trim().toLowerCase();
+    if (stMovie != targetMovie) return false;
+
+    if (widget.theatreName != null) {
+      final stTheatre = (st['theatre'] as String? ?? '').trim().toLowerCase();
+      final targetTheatre = widget.theatreName!.trim().toLowerCase();
+      if (stTheatre != targetTheatre) return false;
+    }
+
+    if (selectedDate != 'All Dates') {
+      final targetIsoDate = _getIsoDateFromLabel(selectedDate);
+      if (st['date'] != targetIsoDate) return false;
+    }
+
+    if (ShowtimeService.isShowtimePassed(st['time'], st['date'])) {
+      return false;
+    }
+
+    if (selectedLanguage != 'Language' &&
+        st['language'] != selectedLanguage) {
+      return false;
+    }
+
+    if (selectedFormat != 'Format' && st['format'] != selectedFormat) {
+      return false;
+    }
+
+    if (selectedTime != 'Show Timings') {
+      final timeStr = st['time'] as String;
+      final isPM = timeStr.contains('PM');
+      final parts = timeStr.split(' ')[0].split(':');
+      final hour = int.parse(parts[0]);
+      final actualHour = (isPM && hour != 12)
+          ? hour + 12
+          : (!isPM && hour == 12 ? 0 : hour);
+
+      if (selectedTime.contains('Morning') &&
+          (actualHour < 9 || actualHour >= 12)) {
+        return false;
+      }
+      if (selectedTime.contains('Afternoon') &&
+          (actualHour < 12 || actualHour >= 16)) {
+        return false;
+      }
+      if (selectedTime.contains('Evening') &&
+          (actualHour < 16 || actualHour >= 19)) {
+        return false;
+      }
+      if (selectedTime.contains('Night') && actualHour < 19) return false;
+    }
+
+    return true;
+  }
+
   List<Map<String, dynamic>> _getFilteredShowtimes() {
-    return allShowtimes.where((st) {
-      // 1. Movie Filter
-      final stMovie = (st['movie'] as String? ?? '').trim().toLowerCase();
-      final targetMovie = (widget.movie['title'] as String)
-          .trim()
-          .toLowerCase();
-      if (stMovie != targetMovie) return false;
-
-      // 2. Theatre Filter
-      if (widget.theatreName != null) {
-        final stTheatre = (st['theatre'] as String? ?? '').trim().toLowerCase();
-        final targetTheatre = widget.theatreName!.trim().toLowerCase();
-        if (stTheatre != targetTheatre) return false;
-      }
-
-      // 3. Date Filter
-      if (selectedDate != 'All Dates') {
-        String targetIsoDate = _getIsoDateFromLabel(selectedDate);
-        if (st['date'] != targetIsoDate) return false;
-      }
-
-      // 4. Past Showtime Filter
-      if (ShowtimeService.isShowtimePassed(st['time'], st['date'])) {
-        return false;
-      }
-
-      // 5. Language Filter
-      if (selectedLanguage != 'Language' &&
-          st['language'] != selectedLanguage) {
-        return false;
-      }
-
-      // 6. Format Filter
-      if (selectedFormat != 'Format' && st['format'] != selectedFormat) {
-        return false;
-      }
-
-      // 7. Time Filter
-      if (selectedTime != 'Show Timings') {
-        final timeStr = st['time'] as String;
-        final isPM = timeStr.contains('PM');
-        final parts = timeStr.split(' ')[0].split(':');
-        final hour = int.parse(parts[0]);
-        final actualHour = (isPM && hour != 12)
-            ? hour + 12
-            : (!isPM && hour == 12 ? 0 : hour);
-
-        if (selectedTime.contains('Morning') &&
-            (actualHour < 9 || actualHour >= 12)) {
-          return false;
-        }
-        if (selectedTime.contains('Afternoon') &&
-            (actualHour < 12 || actualHour >= 16)) {
-          return false;
-        }
-        if (selectedTime.contains('Evening') &&
-            (actualHour < 16 || actualHour >= 19)) {
-          return false;
-        }
-        if (selectedTime.contains('Night') && actualHour < 19) return false;
-      }
-
-      return true;
-    }).toList();
+    final fromPrefs = allShowtimes.where(_matchesShowtimeFilters).toList();
+    if (fromPrefs.isNotEmpty) return fromPrefs;
+    final synthetic = ShowtimeService.buildExternalCatalogShowtimes(_movie);
+    return synthetic.where(_matchesShowtimeFilters).toList();
   }
 
   String _getIsoDateFromLabel(String label) {
@@ -238,40 +239,16 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
-                          Container(
-                            width: 260,
-                            height: 380,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(24),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.2),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 10),
-                                ),
-                              ],
-                              image: DecorationImage(
-                                image:
-                                    widget.movie['image'] != null &&
-                                        widget.movie['image']!.startsWith(
-                                          'http',
-                                        )
-                                    ? NetworkImage(widget.movie['image']!)
-                                    : AssetImage(widget.movie['image'] ?? '')
-                                          as ImageProvider,
-                                fit: BoxFit.cover,
-                                onError: (exception, stackTrace) {
-                                  debugPrint('❌ IMAGE ERROR: $exception');
-                                },
-                              ),
-                            ),
+                          _MovieDetailsPosterCard(
+                            rawMovie: widget.movie,
+                            title: (_movie['title'] ?? 'Movie').toString(),
                           ),
                           Material(
                             color: Colors.transparent,
                             child: InkWell(
                               onTap: () async {
                                 final String? trailerUrl =
-                                    widget.movie['trailerUrl'];
+                                    _movie['trailerUrl']?.toString();
 
                                 // Diagnostic Feedback
                                 if (mounted) {
@@ -361,7 +338,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                         ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 600),
                           child: Text(
-                            widget.movie['title'] ?? 'Unknown',
+                            _movie['title'] ?? 'Unknown',
                             textAlign: TextAlign.center,
                             maxLines: 3,
                             overflow: TextOverflow.ellipsis,
@@ -388,7 +365,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                             ),
                             const SizedBox(width: 2),
                             Text(
-                              widget.movie['rating'] ?? 'N/A',
+                              _movie['rating'] ?? 'N/A',
                               style: GoogleFonts.outfit(
                                 color: Colors.amber[700],
                                 fontWeight: FontWeight.bold,
@@ -397,7 +374,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                             ),
                             _dot(context),
                             Text(
-                              '${widget.movie['duration'] ?? 0} mins',
+                              '${_movie['duration'] ?? 0} mins',
                               style: GoogleFonts.outfit(
                                 color: Theme.of(
                                   context,
@@ -407,7 +384,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                             ),
                             _dot(context),
                             Text(
-                              (widget.movie['genre'] ?? 'Action')
+                              (_movie['genre'] ?? 'Action')
                                   .toString()
                                   .split(RegExp(r'[ /]'))[0],
                               style: GoogleFonts.outfit(
@@ -418,7 +395,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                             ),
                             _dot(context),
                             Text(
-                              widget.movie['releaseDate'] ?? 'Coming Soon',
+                              _movie['releaseDate'] ?? 'Coming Soon',
                               style: GoogleFonts.outfit(
                                 color: Theme.of(
                                   context,
@@ -435,8 +412,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                             runSpacing: 8,
                             alignment: WrapAlignment.center,
                             children: [
-                              ...(widget.movie['formats'] as List<dynamic>? ??
-                                      [])
+                              ...(_movie['formats'] as List<dynamic>? ?? [])
                                   .map(
                                     (f) => _selectionChip(
                                       context,
@@ -444,8 +420,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                                       false,
                                     ),
                                   ),
-                              ...(widget.movie['languages'] as List<dynamic>? ??
-                                      [])
+                              ...(_movie['languages'] as List<dynamic>? ?? [])
                                   .map(
                                     (l) => _selectionChip(
                                       context,
@@ -470,7 +445,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                         _sectionHeader(context, 'Synopsis'),
                         const SizedBox(height: 16),
                         Text(
-                          widget.movie['description'] ??
+                          _movie['description'] ??
                               'No synopsis available.',
                           style: GoogleFonts.outfit(
                             fontSize: 15,
@@ -592,8 +567,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                           label: selectedLanguage,
                           options: [
                             'Language',
-                            ...(widget.movie['languages'] as List<dynamic>? ??
-                                    [])
+                            ...(_movie['languages'] as List<dynamic>? ?? [])
                                 .map((e) => e.toString()),
                           ],
                           onSelected: (v) =>
@@ -603,7 +577,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                           label: selectedFormat,
                           options: [
                             'Format',
-                            ...(widget.movie['formats'] as List<dynamic>? ?? [])
+                            ...(_movie['formats'] as List<dynamic>? ?? [])
                                 .map((e) => e.toString()),
                           ],
                           onSelected: (v) => setState(() => selectedFormat = v),
@@ -667,7 +641,8 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                                     MaterialPageRoute(
                                       builder: (_) => BookingScreen(
                                         movieTitle:
-                                            widget.movie['title'] ?? 'Movie',
+                                            _movie['title']?.toString() ??
+                                                'Movie',
                                         showtime: t['time'],
                                         showDate: t['date'],
                                         theatreName:
@@ -675,6 +650,11 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                                         selectedFormat: t['format'] ?? '2D',
                                         selectedLanguage:
                                             t['language'] ?? 'English',
+                                        ticketPrice:
+                                            (t['price'] as num?)?.toDouble() ??
+                                                MovieCatalogUtils.priceFromMovie(
+                                                  _movie,
+                                                ),
                                       ),
                                     ),
                                   );
@@ -865,6 +845,133 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Prefer raw `image`, then `posterUrl` on load failure; then local asset; then placeholder.
+class _MovieDetailsPosterCard extends StatefulWidget {
+  const _MovieDetailsPosterCard({
+    required this.rawMovie,
+    required this.title,
+  });
+
+  final Map<String, dynamic> rawMovie;
+  final String title;
+
+  @override
+  State<_MovieDetailsPosterCard> createState() => _MovieDetailsPosterCardState();
+}
+
+class _MovieDetailsPosterCardState extends State<_MovieDetailsPosterCard> {
+  late final List<String> _networkUrls;
+  int _urlIndex = 0;
+
+  static String? _httpUrl(dynamic v) {
+    final t = v?.toString().trim() ?? '';
+    if (t.isEmpty || t == 'null') return null;
+    if (t.startsWith('http')) return t;
+    return null;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final img = _httpUrl(widget.rawMovie['image']);
+    final poster = _httpUrl(widget.rawMovie['posterUrl']);
+    _networkUrls = [];
+    if (img != null) _networkUrls.add(img);
+    if (poster != null && poster != img) _networkUrls.add(poster);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    late final Widget child;
+    if (_urlIndex < _networkUrls.length) {
+      final url = _networkUrls[_urlIndex];
+      child = Image.network(
+        url,
+        key: ValueKey<String>(url),
+        width: 260,
+        height: 380,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          MovieCatalogUtils.logPosterLoadFailed(widget.title, error);
+          final next = _urlIndex + 1;
+          if (next < _networkUrls.length) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) setState(() => _urlIndex = next);
+            });
+          }
+          return _posterPlaceholder(context);
+        },
+      );
+    } else {
+      final asset = widget.rawMovie['image']?.toString() ?? '';
+      if (asset.isNotEmpty && !asset.startsWith('http')) {
+        child = Image.asset(
+          asset,
+          width: 260,
+          height: 380,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            MovieCatalogUtils.logPosterLoadFailed(widget.title, error);
+            return _posterPlaceholder(context);
+          },
+        );
+      } else {
+        child = _posterPlaceholder(context);
+      }
+    }
+
+    return Container(
+      width: 260,
+      height: 380,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: child,
+    );
+  }
+
+  Widget _posterPlaceholder(BuildContext context) {
+    return Container(
+      width: 260,
+      height: 380,
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.movie_outlined,
+            size: 56,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            widget.title,
+            textAlign: TextAlign.center,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.outfit(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
       ),
     );
   }

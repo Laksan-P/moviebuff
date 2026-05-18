@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../services/booking_service.dart';
+import '../../utils/text_safety.dart';
 
 class AdminBookingsScreen extends StatefulWidget {
   const AdminBookingsScreen({super.key});
@@ -56,10 +57,7 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
               separatorBuilder: (_, __) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final booking = _bookings[index];
-                final id = booking['id']?.toString() ?? 'N/A';
-                final shortId = id.length > 6
-                    ? '#${id.substring(id.length - 6)}'
-                    : '#$id';
+                final shortId = TextSafety.safeBookingIdSuffix(booking['id']);
                 final status = booking['status'] ?? 'Confirmed';
                 final statusLower = status.toString().toLowerCase();
                 final bool isCancelled =

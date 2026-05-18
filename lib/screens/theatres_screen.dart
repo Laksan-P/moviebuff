@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'theatre_details_screen.dart';
+import 'package:provider/provider.dart';
+
+import '../providers/movie_provider.dart';
 import '../services/theatre_service.dart';
+import '../utils/theatre_catalog_utils.dart';
+import 'theatre_details_screen.dart';
 
 class TheatresScreen extends StatefulWidget {
   const TheatresScreen({super.key});
@@ -11,27 +15,37 @@ class TheatresScreen extends StatefulWidget {
 }
 
 class _TheatresScreenState extends State<TheatresScreen> {
-  List<Map<String, dynamic>> _theatres = [];
-  bool _isLoading = true;
+  List<Map<String, dynamic>> _fallbackTheatres = [];
+  bool _fallbackReady = false;
 
   @override
   void initState() {
     super.initState();
-    _loadTheatres();
+    _loadFallbackTheatres();
   }
 
-  Future<void> _loadTheatres() async {
+  Future<void> _loadFallbackTheatres() async {
     final theatres = await TheatreService.getTheatres();
     if (mounted) {
       setState(() {
-        _theatres = theatres;
-        _isLoading = false;
+        _fallbackTheatres = theatres;
+        _fallbackReady = true;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final movieProv = context.watch<MovieProvider>();
+
+    final fromCatalogue =
+        TheatreCatalogUtils.buildTheatresFromMovies(movieProv.movies);
+    final displayTheatres =
+        fromCatalogue.isNotEmpty ? fromCatalogue : _fallbackTheatres;
+
+    final waitingForFallback =
+        !_fallbackReady && fromCatalogue.isEmpty;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -42,7 +56,7 @@ class _TheatresScreenState extends State<TheatresScreen> {
         foregroundColor: Theme.of(context).colorScheme.onSurface,
         elevation: 0,
       ),
-      body: _isLoading
+      body: waitingForFallback
           ? const Center(child: CircularProgressIndicator())
           : CustomScrollView(
               slivers: [
@@ -52,6 +66,17 @@ class _TheatresScreenState extends State<TheatresScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        if (fromCatalogue.isNotEmpty) ...[
+                          Text(
+                            'Live · from your movie catalogue',
+                            style: GoogleFonts.outfit(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF10B981),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
                         Text(
                           'Select Your Theatre',
                           style: GoogleFonts.outfit(
@@ -62,7 +87,9 @@ class _TheatresScreenState extends State<TheatresScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Browse available theatres and select from exciting movies with multiple showtimes',
+                          fromCatalogue.isNotEmpty
+                              ? 'Venues pulled from the current movie list. Booking uses showtimes for each title.'
+                              : 'Browse available theatres and select from exciting movies with multiple showtimes',
                           style: GoogleFonts.outfit(
                             fontSize: 14,
                             color: Theme.of(
@@ -82,7 +109,7 @@ class _TheatresScreenState extends State<TheatresScreen> {
                   ),
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate((context, index) {
-                      final theatre = _theatres[index];
+                      final theatre = displayTheatres[index];
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 16.0),
                         child: GestureDetector(
@@ -135,14 +162,16 @@ class _TheatresScreenState extends State<TheatresScreen> {
                                                 .withValues(alpha: 0.6),
                                           ),
                                           const SizedBox(width: 4),
-                                          Text(
-                                            theatre['location'] as String,
-                                            style: GoogleFonts.outfit(
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurface
-                                                  .withValues(alpha: 0.6),
-                                              fontSize: 13,
+                                          Expanded(
+                                            child: Text(
+                                              theatre['location'] as String,
+                                              style: GoogleFonts.outfit(
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurface
+                                                    .withValues(alpha: 0.6),
+                                                fontSize: 13,
+                                              ),
                                             ),
                                           ),
                                         ],
@@ -159,7 +188,7 @@ class _TheatresScreenState extends State<TheatresScreen> {
                           ),
                         ),
                       );
-                    }, childCount: _theatres.length),
+                    }, childCount: displayTheatres.length),
                   ),
                 ),
               ],
