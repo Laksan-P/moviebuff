@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'local_db_service.dart';
+
 class BookingService {
   static const String _bookingsKey = 'movie_bookings';
 
@@ -19,8 +21,24 @@ class BookingService {
     return value;
   }
 
+  static Future<void> _syncSqfliteStatus(
+    String bookingId,
+    String status,
+  ) async {
+    final id = int.tryParse(bookingId.toString().trim());
+    if (id == null) return;
+    try {
+      await LocalDbService.updateBookingStatus(id, status);
+    } catch (e) {
+      debugPrint('⚠️ BOOKING — sqflite status sync failed for id=$id: $e');
+    }
+  }
+
   // Save a new booking
-  static Future<void> saveBooking(Map<String, dynamic> booking) async {
+  static Future<void> saveBooking(
+    Map<String, dynamic> booking, {
+    String? clientBookingId,
+  }) async {
     final bookingsJson = await _getString(_bookingsKey) ?? '[]';
     final List<dynamic> bookings = jsonDecode(bookingsJson);
 
@@ -29,7 +47,11 @@ class BookingService {
     booking['bookingDate'] =
         '${_getMonth(now.month)} ${now.day.toString().padLeft(2, '0')}, ${now.year}';
     booking['status'] = 'Confirmed';
-    booking['id'] = DateTime.now().millisecondsSinceEpoch.toString();
+    if (clientBookingId != null && clientBookingId.isNotEmpty) {
+      booking['id'] = clientBookingId;
+    } else {
+      booking['id'] = DateTime.now().millisecondsSinceEpoch.toString();
+    }
 
     bookings.add(booking);
 
@@ -107,6 +129,7 @@ class BookingService {
     }
 
     await _setString(_bookingsKey, jsonEncode(bookings));
+    await _syncSqfliteStatus(bookingId.toString(), 'Cancellation Requested');
   }
 
   // Approve a cancellation
@@ -123,6 +146,7 @@ class BookingService {
     }
 
     await _setString(_bookingsKey, jsonEncode(bookings));
+    await _syncSqfliteStatus(bookingId.toString(), 'Cancelled');
   }
 
   // Reject a cancellation
@@ -138,6 +162,7 @@ class BookingService {
     }
 
     await _setString(_bookingsKey, jsonEncode(bookings));
+    await _syncSqfliteStatus(bookingId.toString(), 'Confirmed');
   }
 
   // Legacy cancel (direct to cancelled)
@@ -153,6 +178,7 @@ class BookingService {
     }
 
     await _setString(_bookingsKey, jsonEncode(bookings));
+    await _syncSqfliteStatus(bookingId.toString(), 'Cancelled');
   }
 
   // Get occupied seats for a specific movie/theatre/date/time

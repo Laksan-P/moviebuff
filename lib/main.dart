@@ -1,47 +1,75 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
 import 'core/theme/app_theme.dart';
-import 'screens/login_screen.dart';
-
-import 'screens/home_screen.dart';
-import 'services/auth_service.dart';
-import 'services/movie_service.dart';
-import 'services/theatre_service.dart';
-import 'services/showtime_service.dart';
+import 'providers/auth_provider.dart';
+import 'providers/connectivity_provider.dart';
+import 'providers/movie_provider.dart';
+import 'providers/theme_provider.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
+import 'screens/home_screen.dart';
+import 'screens/login_screen.dart';
+import 'services/movie_service.dart';
+import 'services/showtime_service.dart';
+import 'services/theatre_service.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Storage Diagnostic
-  await MovieService.initMovies(); // Seeding default movies if first run
-  await TheatreService.initTheatres(); // Seeding default theatres if first run
-  await ShowtimeService.initShowtimes(); // Seeding default showtimes if first run
-  final bool loggedIn = await AuthService.isLoggedIn();
-  final bool isAdmin = await AuthService.isAdmin();
-  final String? email = await AuthService.getUserEmail();
+  // Seed local storage on first run (existing behaviour, untouched).
+  await MovieService.initMovies();
+  await TheatreService.initTheatres();
+  await ShowtimeService.initShowtimes();
+
+  // Create providers, hydrate the ones that need it before runApp.
+  final themeProvider = ThemeProvider();
+  final authProvider = AuthProvider();
+  final connectivityProvider = ConnectivityProvider();
+  final movieProvider = MovieProvider();
+
+  await Future.wait([
+    themeProvider.load(),
+    authProvider.hydrate(),
+    connectivityProvider.init(),
+  ]);
+
+  // Kick off the external movie load asynchronously so the UI can paint.
+  // ignore: unawaited_futures
+  movieProvider.load();
 
   debugPrint(
-    '🚀 APP START - Login Status: $loggedIn (Admin: $isAdmin, Email: $email)',
+    '🚀 APP START - loggedIn=${authProvider.isLoggedIn} admin=${authProvider.isAdmin} email=${authProvider.email}',
   );
 
-  runApp(MyApp(isLoggedIn: loggedIn, isAdmin: isAdmin));
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: themeProvider),
+        ChangeNotifierProvider.value(value: authProvider),
+        ChangeNotifierProvider.value(value: connectivityProvider),
+        ChangeNotifierProvider.value(value: movieProvider),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
-  final bool isLoggedIn;
-  final bool isAdmin;
-  const MyApp({super.key, required this.isLoggedIn, required this.isAdmin});
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
+    final auth = context.watch<AuthProvider>();
+
     return MaterialApp(
       title: 'MovieBuff',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
-      home: isLoggedIn
-          ? (isAdmin ? const AdminDashboardScreen() : const HomeScreen())
+      themeMode: themeProvider.mode,
+      home: auth.isLoggedIn
+          ? (auth.isAdmin ? const AdminDashboardScreen() : const HomeScreen())
           : const LoginScreen(),
     );
   }

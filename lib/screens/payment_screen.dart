@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/booking_service.dart';
 import '../services/auth_service.dart';
+import '../services/local_db_service.dart';
 import 'my_bookings_screen.dart';
 import '../core/theme/app_colors.dart';
 
@@ -40,6 +41,17 @@ class _PaymentScreenState extends State<PaymentScreen> {
   bool _agreedToPolicy = false;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      debugPrint(
+        '💰 BOOKING TOTAL: seats=${widget.ticketCount}, ticketPrice=—, subtotal=${widget.amount}, fees=0.00, total=${widget.amount}',
+      );
+    });
+  }
+
+  @override
   void dispose() {
     _cardNumberController.dispose();
     _cardNameController.dispose();
@@ -65,8 +77,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 1200),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
+                padding: EdgeInsets.symmetric(
+                  horizontal: MediaQuery.sizeOf(context).width < 400 ? 16 : 24,
                   vertical: 24,
                 ),
                 child: Column(
@@ -468,31 +480,67 @@ class _PaymentScreenState extends State<PaymentScreen> {
               ).colorScheme.onSecondaryContainer.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'TOTAL AMOUNT',
-                  style: GoogleFonts.outfit(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSecondaryContainer.withValues(alpha: 0.6),
-                  ),
-                ),
-                Flexible(
-                  child: Text(
-                    'LKR ${widget.amount}',
-                    textAlign: TextAlign.end,
-                    style: GoogleFonts.outfit(
-                      fontSize: isWide ? 16 : 20,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSecondaryContainer,
+            child: LayoutBuilder(
+              builder: (context, c) {
+                final stack = c.maxWidth < 320;
+                final lblStyle = GoogleFonts.outfit(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSecondaryContainer.withValues(alpha: 0.6),
+                );
+                final amtStyle = GoogleFonts.outfit(
+                  fontSize: isWide ? 16 : 20,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSecondaryContainer,
+                );
+                final amountText = 'LKR ${widget.amount}';
+                if (stack) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text('TOTAL AMOUNT', style: lblStyle),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Text(amountText, style: amtStyle),
+                      ),
+                    ],
+                  );
+                }
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'TOTAL AMOUNT',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: lblStyle,
+                      ),
                     ),
-                  ),
-                ),
-              ],
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 2,
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            amountText,
+                            maxLines: 1,
+                            style: amtStyle,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
 
@@ -508,17 +556,22 @@ class _PaymentScreenState extends State<PaymentScreen> {
             child: Column(
               children: [
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text('💡', style: TextStyle(fontSize: 16)),
                     const SizedBox(width: 8),
-                    Text(
-                      '50% REFUND POLICY',
-                      style: GoogleFonts.outfit(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSecondaryContainer,
+                    Expanded(
+                      child: Text(
+                        '50% REFUND POLICY',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.outfit(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSecondaryContainer,
+                        ),
                       ),
                     ),
                   ],
@@ -680,6 +733,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
         const SizedBox(height: 8),
         Text(
           value,
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
           style: GoogleFonts.outfit(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -691,27 +746,63 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   Widget _priceRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.outfit(
-            fontSize: 16,
-            color: Theme.of(
-              context,
-            ).colorScheme.onSecondaryContainer.withValues(alpha: 0.8),
-          ),
-        ),
-        Text(
-          value,
-          style: GoogleFonts.outfit(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSecondaryContainer,
-          ),
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final stack = constraints.maxWidth < 340;
+        final labelStyle = GoogleFonts.outfit(
+          fontSize: 16,
+          color: Theme.of(
+            context,
+          ).colorScheme.onSecondaryContainer.withValues(alpha: 0.8),
+        );
+        final valueStyle = GoogleFonts.outfit(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: Theme.of(context).colorScheme.onSecondaryContainer,
+        );
+        if (stack) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(label, style: labelStyle),
+              const SizedBox(height: 4),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Text(value, style: valueStyle),
+              ),
+            ],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: labelStyle,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              flex: 2,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    value,
+                    maxLines: 1,
+                    style: valueStyle,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -727,8 +818,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     final userName = await AuthService.getUserName() ?? 'Guest';
     final userEmail = await AuthService.getUserEmail() ?? 'Unknown';
 
-    // Save to persistence
-    await BookingService.saveBooking({
+    final bookingPayload = {
       'name': userName,
       'email': userEmail,
       'movie': widget.movieTitle,
@@ -740,7 +830,31 @@ class _PaymentScreenState extends State<PaymentScreen> {
       'tickets': widget.ticketCount.toString(),
       'format': 'IMAX',
       'language': 'English',
-    });
+      'status': 'Confirmed',
+    };
+
+    int localId;
+    try {
+      localId = await LocalDbService.insertBooking(bookingPayload);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not save booking locally: $e')),
+        );
+      }
+      return;
+    }
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Booking saved locally.')),
+    );
+
+    await BookingService.saveBooking(
+      Map<String, dynamic>.from(bookingPayload),
+      clientBookingId: localId.toString(),
+    );
 
     if (!mounted) return;
 
@@ -752,25 +866,32 @@ class _PaymentScreenState extends State<PaymentScreen> {
       transitionDuration: const Duration(milliseconds: 400),
       pageBuilder: (context, anim1, anim2) {
         return Center(
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 24),
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: AppColors.primaryBlue,
-              borderRadius: BorderRadius.circular(32),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  blurRadius: 20,
-                  spreadRadius: 5,
-                ),
-              ],
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(context).height * 0.9,
             ),
-            child: Material(
-              color: Colors.transparent,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
+            child: SingleChildScrollView(
+              child: Container(
+                margin: EdgeInsets.symmetric(
+                  horizontal: MediaQuery.sizeOf(context).width < 400 ? 12 : 24,
+                ),
+                padding: const EdgeInsets.all(32),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryBlue,
+                  borderRadius: BorderRadius.circular(32),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                    ),
+                  ],
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                   // Animated Checkmark Icon
                   TweenAnimationBuilder<double>(
                     tween: Tween(begin: 0, end: 1),
@@ -814,6 +935,30 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       color: Colors.white.withValues(alpha: 0.8),
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: Text(
+                      'Booking saved locally and ready to view in My Bookings.',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.outfit(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white.withValues(alpha: 0.95),
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 40),
                   // Summary Box
                   Container(
@@ -838,31 +983,69 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           padding: EdgeInsets.symmetric(vertical: 16),
                           child: Divider(color: Colors.white24, height: 1),
                         ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'AMOUNT PAID',
-                              style: GoogleFonts.outfit(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onPrimaryContainer
-                                    .withValues(alpha: 0.6),
-                              ),
-                            ),
-                            Text(
-                              'LKR ${widget.amount}',
-                              style: GoogleFonts.outfit(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onPrimaryContainer,
-                              ),
-                            ),
-                          ],
+                        LayoutBuilder(
+                          builder: (context, c) {
+                            final stack = c.maxWidth < 280;
+                            final amtTextStyle = GoogleFonts.outfit(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onPrimaryContainer,
+                            );
+                            final lblStyle = GoogleFonts.outfit(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onPrimaryContainer
+                                  .withValues(alpha: 0.6),
+                            );
+                            final paid = 'LKR ${widget.amount}';
+                            if (stack) {
+                              return Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.stretch,
+                                children: [
+                                  Text('AMOUNT PAID', style: lblStyle),
+                                  const SizedBox(height: 6),
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: Text(paid, style: amtTextStyle),
+                                  ),
+                                ],
+                              );
+                            }
+                            return Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    'AMOUNT PAID',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: lblStyle,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  flex: 2,
+                                  child: Align(
+                                    alignment: Alignment.centerRight,
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      alignment: Alignment.centerRight,
+                                      child: Text(
+                                        paid,
+                                        maxLines: 1,
+                                        style: amtTextStyle,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
                         ),
                       ],
                     ),
@@ -901,7 +1084,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
               ),
             ),
           ),
-        );
+        ),
+      ),
+    );
       },
       transitionBuilder: (context, anim1, anim2, child) {
         return FadeTransition(
@@ -919,22 +1104,30 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   Widget _summaryRow(String label, String value) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: GoogleFonts.outfit(
-            fontSize: 13,
-            color: Theme.of(
-              context,
-            ).colorScheme.onPrimaryContainer.withValues(alpha: 0.6),
+        Expanded(
+          flex: 2,
+          child: Text(
+            label,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.outfit(
+              fontSize: 13,
+              color: Theme.of(
+                context,
+              ).colorScheme.onPrimaryContainer.withValues(alpha: 0.6),
+            ),
           ),
         ),
-        const SizedBox(width: 16),
-        Flexible(
+        const SizedBox(width: 8),
+        Expanded(
+          flex: 3,
           child: Text(
             value,
             textAlign: TextAlign.end,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
             style: GoogleFonts.outfit(
               fontSize: 13,
               fontWeight: FontWeight.bold,

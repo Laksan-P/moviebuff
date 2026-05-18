@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_text_field.dart';
 import 'signup_screen.dart';
 import 'home_screen.dart';
-import '../services/auth_service.dart';
+import '../providers/auth_provider.dart';
+import '../providers/movie_provider.dart';
 import 'admin/admin_dashboard_screen.dart';
 import '../widgets/app_logo.dart';
 
@@ -23,62 +25,65 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _rememberMe = true; // Remember me checkbox state
 
   void _login() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
-
-      // Authenticate against local registry
-      final user = await AuthService.authenticateUser(
-        _emailController.text,
-        _passwordController.text,
+    if (!_formKey.currentState!.validate()) {
+      debugPrint('🔴 LOGIN - Form validation failed');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fix the errors above')),
       );
+      return;
+    }
 
-      if (user == null) {
-        setState(() => _isLoading = false);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Invalid email or password')),
-          );
-        }
-        return;
-      }
+    setState(() => _isLoading = true);
 
-      final isAdmin = user['role'] == 'admin';
+    final auth = context.read<AuthProvider>();
+    final ok = await auth.login(
+      _emailController.text,
+      _passwordController.text,
+    );
 
-      // Save Session with actual user details ONLY if "Remember me" is checked
-      if (_rememberMe) {
-        await AuthService.saveLoginSession(
-          user['name']!,
-          user['email']!,
-          isAdmin: isAdmin,
-        );
-      }
+    if (!_rememberMe) {
+      debugPrint(
+        '🔵 LOGIN - "Remember me" unchecked, session will not persist next launch',
+      );
+    }
 
-      setState(() => _isLoading = false);
-      if (mounted) {
-        if (isAdmin) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
-          );
-        } else {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const HomeScreen()),
-          );
-        }
-      }
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    final message = auth.lastMessage ?? (ok ? 'Signed in' : 'Login failed');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+
+    if (!ok) return;
+
+    // Refresh external movies now that we're online & authenticated.
+    // ignore: unawaited_futures
+    context.read<MovieProvider>().load(forceRefresh: true);
+
+    if (auth.isAdmin) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+      );
+    } else {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 800),
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                // Welcome Banner (Top on mobile)
-                Container(
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  // Welcome Banner (Top on mobile)
+                  Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 32,
@@ -342,6 +347,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
+      ),
       ),
     );
   }

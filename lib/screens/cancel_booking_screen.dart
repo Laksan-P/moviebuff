@@ -186,6 +186,8 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
         children: [
           Text(
             widget.booking['movie'] ?? 'Unknown Movie',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: GoogleFonts.outfit(
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -612,22 +614,32 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
 
   Widget _buildDetailRow(String label, String value) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '$label: ',
-          style: GoogleFonts.outfit(
-            color: Theme.of(
-              context,
-            ).colorScheme.onPrimaryContainer.withValues(alpha: 0.7),
-            fontSize: 15,
+        SizedBox(
+          width: 108,
+          child: Text(
+            '$label:',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.outfit(
+              color: Theme.of(
+                context,
+              ).colorScheme.onPrimaryContainer.withValues(alpha: 0.7),
+              fontSize: 15,
+            ),
           ),
         ),
-        Text(
-          value,
-          style: GoogleFonts.outfit(
-            color: Theme.of(context).colorScheme.onPrimaryContainer,
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
+        Expanded(
+          child: Text(
+            value,
+            maxLines: 4,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.outfit(
+              color: Theme.of(context).colorScheme.onPrimaryContainer,
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ],
@@ -669,24 +681,36 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
 
   Widget _buildSummaryRow(String label, String value, {Color? valueColor}) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: GoogleFonts.outfit(
-            color: Theme.of(
-              context,
-            ).colorScheme.onPrimaryContainer.withValues(alpha: 0.7),
-            fontSize: 15,
+        Expanded(
+          flex: 3,
+          child: Text(
+            label,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.outfit(
+              color: Theme.of(
+                context,
+              ).colorScheme.onPrimaryContainer.withValues(alpha: 0.7),
+              fontSize: 15,
+            ),
           ),
         ),
-        Text(
-          value,
-          style: GoogleFonts.outfit(
-            color:
-                valueColor ?? Theme.of(context).colorScheme.onPrimaryContainer,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
+        const SizedBox(width: 8),
+        Expanded(
+          flex: 2,
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.outfit(
+              color:
+                  valueColor ?? Theme.of(context).colorScheme.onPrimaryContainer,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ],
@@ -724,28 +748,34 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
           ],
         ),
         const SizedBox(width: 12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              time,
-              style: GoogleFonts.outfit(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onPrimaryContainer,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                time,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.outfit(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                ),
               ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              title,
-              style: GoogleFonts.outfit(
-                fontSize: 13,
-                color: Theme.of(
-                  context,
-                ).colorScheme.onPrimaryContainer.withValues(alpha: 0.6),
+              const SizedBox(height: 2),
+              Text(
+                title,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.outfit(
+                  fontSize: 13,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onPrimaryContainer.withValues(alpha: 0.6),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );

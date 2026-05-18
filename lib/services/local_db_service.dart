@@ -1,0 +1,349 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:sqflite/sqflite.dart';
+
+/// sqflite-backed local storage. Three responsibilities:
+///   1. `favorites` table — user starred movies (read/write)
+///   2. `movie_cache` table — last successful external JSON snapshot
+///   3. `bookings` table — movie ticket bookings (MAD II local DB scenario)
+class LocalDbService {
+  static const _dbName = 'moviebuff.db';
+  static const _dbVersion = 2;
+
+  static const _favTable = 'favorites';
+  static const _cacheTable = 'movie_cache';
+  static const _bookingsTable = 'bookings';
+
+  static Database? _db;
+
+  static Future<void> _createFavoritesAndCache(Database db) async {
+    await db.execute('''
+      CREATE TABLE $_favTable (
+        title       TEXT PRIMARY KEY,
+        image       TEXT,
+        genre       TEXT,
+        added_at    INTEGER NOT NULL
+      );
+    ''');
+    await db.execute('''
+      CREATE TABLE $_cacheTable (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        source      TEXT NOT NULL,
+        payload     TEXT NOT NULL,
+        fetched_at  INTEGER NOT NULL
+      );
+    ''');
+  }
+
+  static Future<void> _createBookingsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE $_bookingsTable (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        server_id TEXT,
+        user_email TEXT NOT NULL,
+        movie_title TEXT NOT NULL,
+        theatre TEXT NOT NULL,
+        date TEXT NOT NULL,
+        time TEXT NOT NULL,
+        seats TEXT NOT NULL,
+        amount REAL NOT NULL,
+        status TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        synced INTEGER NOT NULL DEFAULT 0
+      );
+    ''');
+  }
+
+  static Future<Database> _database() async {
+    if (_db != null) return _db!;
+    final dir = await getApplicationDocumentsDirectory();
+    final path = p.join(dir.path, _dbName);
+    debugPrint('🗄️ SQFLITE - Opening database at: $path');
+
+    _db = await openDatabase(
+      path,
+      version: _dbVersion,
+      onCreate: (db, _) async {
+        debugPrint('🗄️ SQFLITE - onCreate v$_dbVersion');
+        await _createFavoritesAndCache(db);
+        await _createBookingsTable(db);
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        debugPrint('🗄️ SQFLITE - onUpgrade $oldVersion → $newVersion');
+        if (oldVersion < 2) {
+          await _createBookingsTable(db);
+        }
+      },
+    );
+    return _db!;
+  }
+
+  // ---------- Favorites ----------
+
+  static Future<void> addFavorite(Map<String, dynamic> movie) async {
+    final db = await _database();
+    await db.insert(
+      _favTable,
+      {
+        'title': movie['title'],
+        'image': movie['image'] ?? '',
+        'genre': movie['genre'] ?? '',
+        'added_at': DateTime.now().millisecondsSinceEpoch,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    debugPrint('⭐ SQFLITE - Added favorite: ${movie['title']}');
+  }
+
+  static Future<void> removeFavorite(String title) async {
+    final db = await _database();
+    final n = await db.delete(_favTable, where: 'title = ?', whereArgs: [title]);
+    debugPrint('⭐ SQFLITE - Removed favorite ($n row): $title');
+  }
+
+  static Future<bool> isFavorite(String title) async {
+    final db = await _database();
+    final rows = await db.query(
+      _favTable,
+      where: 'title = ?',
+      whereArgs: [title],
+      limit: 1,
+    );
+    return rows.isNotEmpty;
+  }
+
+  static Future<List<Map<String, dynamic>>> getFavorites() async {
+    final db = await _database();
+    final rows = await db.query(_favTable, orderBy: 'added_at DESC');
+    debugPrint('⭐ SQFLITE - Loaded ${rows.length} favorites');
+    return rows;
+  }
+
+  // ---------- Movie cache ----------
+
+  static Future<void> writeMovieCache(
+    String source,
+    List<dynamic> payload,
+  ) async {
+    final db = await _database();
+    await db.delete(_cacheTable, where: 'source = ?', whereArgs: [source]);
+    await db.insert(_cacheTable, {
+      'source': source,
+      'payload': jsonEncode(payload),
+      'fetched_at': DateTime.now().millisecondsSinceEpoch,
+    });
+    debugPrint(
+      '🗄️ SQFLITE - Cached ${payload.length} entries for source: $source',
+    );
+  }
+
+  static Future<List<Map<String, dynamic>>?> readMovieCache(
+    String source,
+  ) async {
+    final db = await _database();
+    final rows = await db.query(
+      _cacheTable,
+      where: 'source = ?',
+      whereArgs: [source],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+
+    final raw = rows.first['payload'] as String;
+    final decoded = jsonDecode(raw) as List<dynamic>;
+    debugPrint(
+      '🗄️ SQFLITE - Loaded ${decoded.length} cached entries for $source',
+    );
+    return decoded.map((e) => Map<String, dynamic>.from(e)).toList();
+  }
+
+  static Future<DateTime?> cacheTimestamp(String source) async {
+    final db = await _database();
+    final rows = await db.query(
+      _cacheTable,
+      columns: ['fetched_at'],
+      where: 'source = ?',
+      whereArgs: [source],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return DateTime.fromMillisecondsSinceEpoch(rows.first['fetched_at'] as int);
+  }
+
+  // ---------- Bookings ----------
+
+  static double _parseAmount(dynamic raw) {
+    final s = raw?.toString() ?? '0';
+    return double.tryParse(s.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0.0;
+  }
+
+  static String _formatBookingDateFromIso(String iso) {
+    try {
+      final d = DateTime.parse(iso);
+      const months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
+      return '${months[d.month - 1]} ${d.day.toString().padLeft(2, '0')}, ${d.year}';
+    } catch (_) {
+      return iso;
+    }
+  }
+
+  static String _ticketsFromSeats(String? seats) {
+    if (seats == null || seats.trim().isEmpty) return '1';
+    return seats.split(',').length.toString();
+  }
+
+  /// Maps a DB row to the shape expected by My Bookings / cancel UI.
+  static Map<String, dynamic> _bookingRowToUiMap(Map<String, Object?> row) {
+    final created = row['created_at'] as String? ?? '';
+    final synced = (row['synced'] as int? ?? 0) == 1;
+    return {
+      'id': row['id'].toString(),
+      'server_id': row['server_id'],
+      'movie': row['movie_title']?.toString() ?? '',
+      'theatre': row['theatre']?.toString() ?? '',
+      'date': row['date']?.toString() ?? '',
+      'time': row['time']?.toString() ?? '',
+      'seats': row['seats']?.toString() ?? '',
+      'amount': row['amount']?.toString() ?? '0',
+      'tickets': _ticketsFromSeats(row['seats'] as String?),
+      'status': row['status']?.toString() ?? 'Unknown',
+      'bookingDate': _formatBookingDateFromIso(created),
+      'synced': synced,
+      'email': row['user_email']?.toString() ?? '',
+      'format': 'IMAX',
+      'language': 'English',
+      'name': '',
+    };
+  }
+
+  /// Inserts a booking. [booking] uses the same keys as [BookingService.saveBooking]
+  /// input (`email`, `movie`, `theatre`, `date`, `time`, `seats`, `amount`, …).
+  static Future<int> insertBooking(Map<String, dynamic> booking) async {
+    try {
+      final db = await _database();
+      final createdAt =
+          booking['created_at']?.toString() ?? DateTime.now().toIso8601String();
+      final rowId = await db.insert(_bookingsTable, {
+        'server_id': booking['server_id']?.toString(),
+        'user_email': booking['email']?.toString() ?? '',
+        'movie_title': booking['movie']?.toString() ?? '',
+        'theatre': booking['theatre']?.toString() ?? '',
+        'date': booking['date']?.toString() ?? '',
+        'time': booking['time']?.toString() ?? '',
+        'seats': booking['seats']?.toString() ?? '',
+        'amount': _parseAmount(booking['amount']),
+        'status': booking['status']?.toString() ?? 'Confirmed',
+        'created_at': createdAt,
+        'synced': 0,
+      });
+      debugPrint(
+        '✅ SQFLITE WRITE SUCCESS: booking inserted with id $rowId',
+      );
+      return rowId;
+    } catch (e, st) {
+      debugPrint('❌ SQFLITE ERROR: insertBooking — $e\n$st');
+      rethrow;
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getBookingsByUser(
+    String userEmail,
+  ) async {
+    try {
+      final db = await _database();
+      final rows = await db.query(
+        _bookingsTable,
+        where: 'user_email = ?',
+        whereArgs: [userEmail],
+        orderBy: 'id DESC',
+      );
+      debugPrint(
+        '✅ SQFLITE READ SUCCESS: loaded ${rows.length} bookings for user '
+        '$userEmail',
+      );
+      return rows.map((r) => _bookingRowToUiMap(r)).toList();
+    } catch (e, st) {
+      debugPrint('❌ SQFLITE ERROR: getBookingsByUser — $e\n$st');
+      rethrow;
+    }
+  }
+
+  static Future<void> updateBookingStatus(int id, String status) async {
+    try {
+      final db = await _database();
+      final n = await db.update(
+        _bookingsTable,
+        {'status': status},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      if (n > 0) {
+        debugPrint(
+          '✅ SQFLITE UPDATE SUCCESS: booking status updated (id=$id → $status)',
+        );
+      } else {
+        debugPrint(
+          '❌ SQFLITE ERROR: updateBookingStatus — no row for id=$id',
+        );
+      }
+    } catch (e, st) {
+      debugPrint('❌ SQFLITE ERROR: updateBookingStatus — $e\n$st');
+      rethrow;
+    }
+  }
+
+  static Future<void> deleteBooking(int id) async {
+    try {
+      final db = await _database();
+      await db.delete(_bookingsTable, where: 'id = ?', whereArgs: [id]);
+      debugPrint('🗄️ SQFLITE - deleteBooking completed id=$id');
+    } catch (e, st) {
+      debugPrint('❌ SQFLITE ERROR: deleteBooking — $e\n$st');
+      rethrow;
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getUnsyncedBookings() async {
+    try {
+      final db = await _database();
+      final rows = await db.query(_bookingsTable, where: 'synced = ?', whereArgs: [0]);
+      return rows.map((r) => Map<String, dynamic>.from(r)).toList();
+    } catch (e, st) {
+      debugPrint('❌ SQFLITE ERROR: getUnsyncedBookings — $e\n$st');
+      rethrow;
+    }
+  }
+
+  static Future<void> markBookingSynced(int id, String serverId) async {
+    try {
+      final db = await _database();
+      await db.update(
+        _bookingsTable,
+        {'server_id': serverId, 'synced': 1},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      debugPrint(
+        '✅ SQFLITE UPDATE SUCCESS: booking $id marked synced (server_id=$serverId)',
+      );
+    } catch (e, st) {
+      debugPrint('❌ SQFLITE ERROR: markBookingSynced — $e\n$st');
+      rethrow;
+    }
+  }
+}

@@ -363,6 +363,8 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                           child: Text(
                             widget.movie['title'] ?? 'Unknown',
                             textAlign: TextAlign.center,
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
                             softWrap: true,
                             style: GoogleFonts.outfit(
                               fontSize: 32,
@@ -488,55 +490,65 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _sectionHeader(context, 'Cast'),
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          height: 110,
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: cast.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(width: 24),
-                            itemBuilder: (_, i) {
-                              return Column(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 32,
-                                    backgroundColor: Theme.of(
-                                      context,
-                                    ).colorScheme.surface,
-                                    child: Icon(
-                                      Icons.person,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withValues(alpha: 0.4),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    cast[i]['name']!,
-                                    style: GoogleFonts.outfit(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                      color: Theme.of(
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 16,
+                          runSpacing: 12,
+                          alignment: WrapAlignment.start,
+                          children: [
+                            for (final member in cast)
+                              SizedBox(
+                                width: 92,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 28,
+                                      backgroundColor: Theme.of(
                                         context,
-                                      ).colorScheme.onSurface,
+                                      ).colorScheme.surface,
+                                      child: Icon(
+                                        Icons.person,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withValues(alpha: 0.4),
+                                      ),
                                     ),
-                                  ),
-                                  Text(
-                                    cast[i]['role']!,
-                                    style: GoogleFonts.outfit(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withValues(alpha: 0.6),
-                                      fontSize: 11,
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      member['name']!,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.outfit(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                        height: 1.2,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurface,
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              );
-                            },
-                          ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      member['role']!,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.outfit(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withValues(alpha: 0.6),
+                                        fontSize: 11,
+                                        height: 1.2,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
                         ),
                       ],
                     ),

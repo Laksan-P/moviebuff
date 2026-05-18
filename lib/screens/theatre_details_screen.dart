@@ -126,6 +126,8 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
                       children: [
                         Text(
                           widget.theatre['name'],
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.outfit(
                             color: Theme.of(
                               context,
@@ -167,16 +169,21 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
 
                   // Now Showing
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Text(
-                        'Now Showing',
-                        style: GoogleFonts.outfit(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onSurface,
+                      Expanded(
+                        child: Text(
+                          'Now Showing',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.outfit(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
@@ -190,6 +197,8 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
                         ),
                         child: Text(
                           '${_movies.length} Movies',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.outfit(
                             color: Theme.of(context).colorScheme.primary,
                             fontWeight: FontWeight.bold,

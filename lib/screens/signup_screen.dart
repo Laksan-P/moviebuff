@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_text_field.dart';
 import 'login_screen.dart';
 import 'home_screen.dart';
-import '../services/auth_service.dart';
+import '../providers/auth_provider.dart';
+import '../providers/movie_provider.dart';
 import 'admin/admin_dashboard_screen.dart';
 import '../widgets/app_logo.dart';
 
@@ -26,78 +28,66 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _termsAccepted = false;
 
   void _signup() async {
-    if (_formKey.currentState!.validate()) {
-      if (!_termsAccepted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please accept the terms of service')),
-        );
-        return;
-      }
-      setState(() => _isLoading = true);
-
-      final isRegisteringAsAdmin = _emailController.text.toLowerCase().contains(
-        'admin@moviebuff.com',
+    if (!_formKey.currentState!.validate()) {
+      debugPrint('🔴 SIGNUP - Form validation failed');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fix the errors above')),
       );
-
-      // Register User Permanently
-      final success = await AuthService.registerUser(
-        _nameController.text,
-        _emailController.text,
-        _passwordController.text,
-        role: isRegisteringAsAdmin ? 'admin' : 'user',
+      return;
+    }
+    if (!_termsAccepted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please accept the terms of service')),
       );
+      return;
+    }
 
-      if (!success) {
-        setState(() => _isLoading = false);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Email already registered!')),
-          );
-        }
-        return;
-      }
+    setState(() => _isLoading = true);
 
-      // Save Current Session
-      await AuthService.saveLoginSession(
-        _nameController.text,
-        _emailController.text,
-        isAdmin: isRegisteringAsAdmin,
+    final auth = context.read<AuthProvider>();
+    final ok = await auth.register(
+      _nameController.text,
+      _emailController.text,
+      _passwordController.text,
+    );
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    final message =
+        auth.lastMessage ?? (ok ? 'Account created' : 'Registration failed');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+
+    if (!ok) return;
+
+    // ignore: unawaited_futures
+    context.read<MovieProvider>().load(forceRefresh: true);
+
+    if (auth.isAdmin) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
       );
-
-      setState(() => _isLoading = false);
-      if (mounted) {
-        if (isRegisteringAsAdmin) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Admin account created! Welcome to the dashboard.'),
-            ),
-          );
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Account created! Logging you in...')),
-          );
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const HomeScreen()),
-          );
-        }
-      }
+    } else {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 800),
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                // Welcome Banner (Top on mobile)
-                Container(
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  // Welcome Banner (Top on mobile)
+                  Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 32,
@@ -386,6 +376,7 @@ class _SignupScreenState extends State<SignupScreen> {
             ),
           ),
         ),
+      ),
       ),
     );
   }

@@ -55,6 +55,7 @@ class _BookingScreenState extends State<BookingScreen> {
 
   void _toggleSeat(String seat) {
     if (_bookedSeats.contains(seat)) return; // If seat is booked, do nothing
+    final hadNoSelection = _selectedSeats.isEmpty;
     setState(() {
       if (_selectedSeats.contains(seat)) {
         _selectedSeats.remove(seat);
@@ -62,6 +63,17 @@ class _BookingScreenState extends State<BookingScreen> {
         _selectedSeats.add(seat);
       }
     });
+    if (hadNoSelection && _selectedSeats.isNotEmpty) {
+      _debugBookingTotals();
+    }
+  }
+
+  void _debugBookingTotals() {
+    final subtotal = _selectedSeats.length * _pricePerSeat;
+    final total = subtotal + _bookingFee;
+    debugPrint(
+      '💰 BOOKING TOTAL: seats=${_selectedSeats.length}, ticketPrice=$_pricePerSeat, subtotal=${subtotal.toStringAsFixed(2)}, fees=${_bookingFee.toStringAsFixed(2)}, total=${total.toStringAsFixed(2)}',
+    );
   }
 
   @override
@@ -192,9 +204,11 @@ class _BookingScreenState extends State<BookingScreen> {
                   const Divider(color: Colors.white24),
                   const SizedBox(height: 16),
 
-                  // Legend
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  // Legend (wraps on narrow screens)
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 16,
+                    runSpacing: 8,
                     children: [
                       _buildLegendItem(
                         'Available',
@@ -205,7 +219,6 @@ class _BookingScreenState extends State<BookingScreen> {
                             ? AppColors.seatBorderDark
                             : AppColors.seatBorder,
                       ),
-                      const SizedBox(width: 16),
                       _buildLegendItem(
                         'Selected',
                         isDark
@@ -213,7 +226,6 @@ class _BookingScreenState extends State<BookingScreen> {
                             : AppColors.seatSelected,
                         Colors.transparent,
                       ),
-                      const SizedBox(width: 16),
                       _buildLegendItem(
                         'Booked',
                         isDark
@@ -287,36 +299,55 @@ class _BookingScreenState extends State<BookingScreen> {
                     const Divider(color: Colors.white24),
                     const SizedBox(height: 24),
 
-                    _priceRow('Subtotal', 'LKR ${subtotal.toStringAsFixed(2)}'),
+                    _moneyRow(
+                      label: 'Subtotal',
+                      amountLabel: 'LKR ${subtotal.toStringAsFixed(2)}',
+                      labelStyle: GoogleFonts.outfit(
+                        fontSize: 15,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
+                      ),
+                      amountStyle: GoogleFonts.outfit(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      ),
+                    ),
                     const SizedBox(height: 12),
-                    _priceRow(
-                      'Booking Fees',
-                      'LKR ${_bookingFee.toStringAsFixed(2)}',
+                    _moneyRow(
+                      label: 'Booking Fees',
+                      amountLabel: 'LKR ${_bookingFee.toStringAsFixed(2)}',
+                      labelStyle: GoogleFonts.outfit(
+                        fontSize: 15,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
+                      ),
+                      amountStyle: GoogleFonts.outfit(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      ),
                     ),
 
                     const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Total',
-                          style: GoogleFonts.outfit(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        Text(
-                          'LKR ${total.toStringAsFixed(2)}',
-                          style: GoogleFonts.outfit(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onPrimaryContainer,
-                          ),
-                        ),
-                      ],
+                    _moneyRow(
+                      label: 'Total',
+                      amountLabel: 'LKR ${total.toStringAsFixed(2)}',
+                      labelStyle: GoogleFonts.outfit(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                      amountStyle: GoogleFonts.outfit(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onPrimaryContainer,
+                      ),
+                      minWidthForRow: 340,
                     ),
 
                     const SizedBox(height: 32),
@@ -325,6 +356,7 @@ class _BookingScreenState extends State<BookingScreen> {
                       height: 56,
                       child: ElevatedButton(
                         onPressed: () {
+                          _debugBookingTotals();
                           Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -416,6 +448,8 @@ class _BookingScreenState extends State<BookingScreen> {
         const SizedBox(height: 4),
         Text(
           value,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
           style: GoogleFonts.outfit(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -426,28 +460,60 @@ class _BookingScreenState extends State<BookingScreen> {
     );
   }
 
-  Widget _priceRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.outfit(
-            fontSize: 15,
-            color: Theme.of(
-              context,
-            ).colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
-          ),
-        ),
-        Text(
-          value,
-          style: GoogleFonts.outfit(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onPrimaryContainer,
-          ),
-        ),
-      ],
+  /// Label + money: full amount always visible (FittedBox / stacked on narrow).
+  Widget _moneyRow({
+    required String label,
+    required String amountLabel,
+    required TextStyle labelStyle,
+    required TextStyle amountStyle,
+    double minWidthForRow = 280,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final useColumn = constraints.maxWidth < minWidthForRow;
+        if (useColumn) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(label, style: labelStyle),
+              const SizedBox(height: 6),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Text(amountLabel, style: amountStyle),
+              ),
+            ],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: labelStyle,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              flex: 2,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    amountLabel,
+                    maxLines: 1,
+                    style: amountStyle,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
