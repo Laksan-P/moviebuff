@@ -89,8 +89,11 @@ class _AdminTheatresScreenState extends State<AdminTheatresScreen> {
                       }
                     }
 
-                    if (context.mounted) Navigator.pop(context);
-                    if (context.mounted) setState(() {});
+                    if (!context.mounted) return;
+                    await context.read<MovieProvider>().refreshAfterAdminEdit();
+                    if (!context.mounted) return;
+                    Navigator.pop(context);
+                    if (mounted) setState(() {});
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).colorScheme.primary,
@@ -204,7 +207,10 @@ class _AdminTheatresScreenState extends State<AdminTheatresScreen> {
     } else {
       await TheatreService.removeTheatreByName(theatre['name'] as String);
     }
-    if (mounted) setState(() {});
+    if (mounted) {
+      await context.read<MovieProvider>().refreshAfterAdminEdit();
+      setState(() {});
+    }
   }
 
   @override

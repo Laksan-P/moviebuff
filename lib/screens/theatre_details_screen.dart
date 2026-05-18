@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import '../widgets/custom_button.dart';
 import '../utils/movie_catalog_utils.dart';
 import 'movie_details_screen.dart';
-import '../services/movie_service.dart';
 import '../services/showtime_service.dart';
 import '../providers/movie_provider.dart';
 
@@ -43,12 +42,9 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
     setState(() => _isLoading = true);
 
     final movieProv = context.read<MovieProvider>();
-    final local = await MovieService.getMovies();
-    final merged = MovieCatalogUtils.mergeCustomerMovieLists(
-      movieProv.movies,
-      local,
-    );
-    final allShowtimes = await ShowtimeService.getShowtimes();
+    final merged = movieProv.movies;
+    final allShowtimes =
+        await ShowtimeService.getCustomerShowtimes(merged);
 
     final targetTheatre = (widget.theatre['name'] as String).trim();
 
@@ -69,7 +65,8 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
     }
 
     final filteredMovies = merged.where((movie) {
-      final movieTitle = (movie['title'] as String).trim().toLowerCase();
+      final movieTitle =
+          (movie['title'] as String? ?? '').trim().toLowerCase();
 
       if (!movieBelongsToTheatre(movie)) return false;
 

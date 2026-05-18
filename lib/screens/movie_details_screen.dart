@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'booking_screen.dart';
+import '../providers/movie_provider.dart';
 import '../services/showtime_service.dart';
 import '../utils/movie_catalog_utils.dart';
 
@@ -56,7 +58,8 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
   Future<void> _loadShowtimes() async {
     setState(() => _isloadingShowtimes = true);
 
-    final showtimes = await ShowtimeService.getShowtimes();
+    final merged = context.read<MovieProvider>().movies;
+    final showtimes = await ShowtimeService.getCustomerShowtimes(merged);
 
     debugPrint(
       '🎬 MOVIE DETAILS - Total showtimes loaded: ${showtimes.length}',

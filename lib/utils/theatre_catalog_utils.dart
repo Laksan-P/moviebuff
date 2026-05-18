@@ -12,6 +12,14 @@ class TheatreCatalogUtils {
         .trim();
   }
 
+  /// True when two theatre display strings refer to the same venue (normalized key).
+  static bool theatresLooselyMatch(String a, String b) {
+    final ka = normalizeTheatreKey(a);
+    final kb = normalizeTheatreKey(b);
+    if (ka.isEmpty || kb.isEmpty) return false;
+    return ka == kb;
+  }
+
   /// Default address when JSON has no per-row address; covers known SL venues.
   static String locationForTheatreName(String displayName) {
     final k = normalizeTheatreKey(displayName);

@@ -203,19 +203,22 @@ class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
                             );
                           }
                         }
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                movie == null
-                                    ? 'Movie added successfully'
-                                    : 'Movie updated successfully',
-                              ),
-                              backgroundColor: Colors.green,
+                        if (!context.mounted) return;
+                        await context
+                            .read<MovieProvider>()
+                            .refreshAfterAdminEdit();
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              movie == null
+                                  ? 'Movie added successfully'
+                                  : 'Movie updated successfully',
                             ),
-                          );
-                          Navigator.pop(context);
-                        }
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                        Navigator.pop(context);
                         if (mounted) setState(() {});
                       } catch (e) {
                         if (context.mounted) {
@@ -529,7 +532,10 @@ class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
     } else {
       await MovieService.removeMovie(movie['title'] as String);
     }
-    if (mounted) setState(() {});
+    if (mounted) {
+      await context.read<MovieProvider>().refreshAfterAdminEdit();
+      setState(() {});
+    }
   }
 
   Widget _thumb(Map<String, dynamic> movie) {

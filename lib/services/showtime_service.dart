@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../utils/movie_catalog_utils.dart';
+import '../utils/theatre_catalog_utils.dart';
+import 'admin_catalog_service.dart';
 
 class ShowtimeService {
   static const String _showtimesKey = 'app_showtimes_v4'; // Relative dates v4
@@ -182,7 +184,7 @@ class ShowtimeService {
     },
   ];
 
-  static Future<void> initShowtimes() async {
+  static Future<void> initShowtimes({bool applySem1Templates = true}) async {
     final existingJson = await _getString(_showtimesKey);
     List<Map<String, dynamic>> showtimes = [];
 
@@ -201,60 +203,190 @@ class ShowtimeService {
       return templatePrefixes.any((prefix) => id.startsWith(prefix));
     });
 
-    // Generate fresh templates for the next 7 days
-    final now = DateTime.now();
-    final List<Map<String, dynamic>> freshTemplates = [];
+    if (applySem1Templates) {
+      // Generate fresh templates for the next 7 days
+      final now = DateTime.now();
+      final List<Map<String, dynamic>> freshTemplates = [];
 
-    for (var template in _showtimeTemplates) {
-      final days = template['days'] as List<int>;
-      for (int offset in days) {
-        final showDate = now.add(Duration(days: offset));
-        final dateStr =
-            '${showDate.year}-${showDate.month.toString().padLeft(2, '0')}-${showDate.day.toString().padLeft(2, '0')}';
+      for (var template in _showtimeTemplates) {
+        final days = template['days'] as List<int>;
+        for (int offset in days) {
+          final showDate = now.add(Duration(days: offset));
+          final dateStr =
+              '${showDate.year}-${showDate.month.toString().padLeft(2, '0')}-${showDate.day.toString().padLeft(2, '0')}';
 
-        freshTemplates.add({
-          'id': '${template['id_base']}_$offset',
-          'time': template['time'],
-          'label': template['label'],
-          'language': template['language'],
-          'format': template['format'],
-          'date': dateStr,
-          'theatre': template['theatre'],
-          'movie': template['movie'],
-          'price': template['price'],
-        });
+          freshTemplates.add({
+            'id': '${template['id_base']}_$offset',
+            'time': template['time'],
+            'label': template['label'],
+            'language': template['language'],
+            'format': template['format'],
+            'date': dateStr,
+            'theatre': template['theatre'],
+            'movie': template['movie'],
+            'price': template['price'],
+          });
+        }
       }
+
+      showtimes.addAll(freshTemplates);
+      debugPrint(
+        '⏰ SHOWTIME SERVICE - Refreshed templates. Total: ${showtimes.length} (Templates: ${freshTemplates.length})',
+      );
+    } else {
+      debugPrint(
+        '⏰ SHOWTIME SERVICE - Sem 1 templates skipped (active catalogue). Total: ${showtimes.length}',
+      );
     }
 
-    // Merge and save
-    showtimes.addAll(freshTemplates);
     await _setString(_showtimesKey, jsonEncode(showtimes));
+  }
 
-    debugPrint(
-      '⏰ SHOWTIME SERVICE - Refreshed templates. Total: ${showtimes.length} (Templates: ${freshTemplates.length})',
+  static Future<List<Map<String, dynamic>>> _readPrefsList() async {
+    final json = await _getString(_showtimesKey) ?? '[]';
+    final List<dynamic> decoded = jsonDecode(json);
+    return decoded.map((s) => Map<String, dynamic>.from(s)).toList();
+  }
+
+  /// Dedupe key: movie + theatre + date + time + format + language (lowercase).
+  static String showtimeDedupeKey(Map<String, dynamic> st) {
+    final m = (st['movie'] ?? '').toString().toLowerCase().trim();
+    final t = (st['theatre'] ?? '').toString().toLowerCase().trim();
+    final d = (st['date'] ?? '').toString();
+    final ti = (st['time'] ?? '').toString().toLowerCase().trim();
+    final f = (st['format'] ?? '').toString().toLowerCase().trim();
+    final l = (st['language'] ?? '').toString().toLowerCase().trim();
+    return '$m|$t|$d|$ti|$f|$l';
+  }
+
+  static bool _catalogueStyleMovies(List<Map<String, dynamic>> mergedMovies) {
+    if (mergedMovies.isEmpty) return false;
+    return mergedMovies.any(
+      (m) =>
+          (m['theatre']?.toString().trim() ?? '').isNotEmpty ||
+          (m['showtimes'] is List && (m['showtimes'] as List).isNotEmpty),
     );
   }
 
+  static bool _showtimeMatchesMergedCatalogue(
+    Map<String, dynamic> st,
+    List<Map<String, dynamic>> mergedMovies,
+  ) {
+    final stMovie = AdminCatalogService.normalizeMovieKey(st['movie']?.toString());
+    for (final m in mergedMovies) {
+      final mt = AdminCatalogService.normalizeMovieKey(m['title']?.toString());
+      if (mt != stMovie) continue;
+      if (TheatreCatalogUtils.normalizeTheatreKey(
+            m['theatre']?.toString() ?? '',
+          ).isEmpty ||
+          TheatreCatalogUtils.theatresLooselyMatch(
+            m['theatre']?.toString() ?? '',
+            st['theatre']?.toString() ?? '',
+          )) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// Customer + movie-details: prefs showtimes (filtered) + synthetic catalogue showtimes.
+  static Future<List<Map<String, dynamic>>> getCustomerShowtimes(
+    List<Map<String, dynamic>> mergedMovies,
+  ) async {
+    final useSem1 = mergedMovies.isEmpty || !_catalogueStyleMovies(mergedMovies);
+    if (useSem1) {
+      debugPrint('⚠️ ADMIN FALLBACK - Using default showtime data');
+    }
+    await initShowtimes(applySem1Templates: useSem1);
+
+    final hiddenMovies = await AdminCatalogService.hiddenMovieKeys();
+    final hiddenTheatres = await AdminCatalogService.hiddenTheatreKeys();
+    var list = await _readPrefsList();
+
+    list = list.where((s) {
+      final mk = AdminCatalogService.normalizeMovieKey(s['movie']?.toString());
+      if (hiddenMovies.contains(mk)) return false;
+      final tk = TheatreCatalogUtils.normalizeTheatreKey(
+        s['theatre']?.toString() ?? '',
+      );
+      if (hiddenTheatres.contains(tk)) return false;
+      if (!useSem1) {
+        return _showtimeMatchesMergedCatalogue(s, mergedMovies);
+      }
+      return true;
+    }).toList();
+
+    final merged = <String, Map<String, dynamic>>{};
+    for (final s in list) {
+      merged[showtimeDedupeKey(s)] = s;
+    }
+
+    if (!useSem1) {
+      for (final m in mergedMovies) {
+        for (final st in buildExternalCatalogShowtimes(m)) {
+          final k = showtimeDedupeKey(st);
+          merged.putIfAbsent(k, () => st);
+        }
+      }
+    }
+
+    final out = merged.values.toList();
+    debugPrint('🕒 CUSTOMER SHOWTIMES - ${out.length} slots (sem1=$useSem1)');
+    return out;
+  }
+
+  /// Same data as [getCustomerShowtimes] with admin dashboard log line.
+  static Future<List<Map<String, dynamic>>> getAdminMergedShowtimes(
+    List<Map<String, dynamic>> mergedMovies,
+  ) async {
+    final out = await getCustomerShowtimes(mergedMovies);
+    debugPrint(
+      '🕒 ADMIN SHOWTIMES - Loaded ${out.length} showtimes from active catalogue',
+    );
+    return out;
+  }
+
+  /// Backwards-compatible: seeds Sem 1 templates when no merged-movie context provided.
   static Future<List<Map<String, dynamic>>> getShowtimes() async {
-    await initShowtimes();
+    await initShowtimes(applySem1Templates: true);
     final json = await _getString(_showtimesKey) ?? '[]';
     final List<dynamic> decoded = jsonDecode(json);
     return decoded.map((s) => Map<String, dynamic>.from(s)).toList();
   }
 
   static Future<void> addShowtime(Map<String, dynamic> showtime) async {
-    final showtimes = await getShowtimes();
-    showtime['id'] = DateTime.now().millisecondsSinceEpoch.toString();
-    showtimes.add(showtime);
-    await _setString(_showtimesKey, jsonEncode(showtimes));
-    debugPrint('⏰ SHOWTIME SERVICE - Added showtime: ${showtime['time']}');
+    final list = await _readPrefsList();
+    final row = Map<String, dynamic>.from(showtime);
+    row['id'] = DateTime.now().millisecondsSinceEpoch.toString();
+    row['_adminLocal'] = true;
+    list.add(row);
+    await _setString(_showtimesKey, jsonEncode(list));
+    debugPrint(
+      '🛠️ ADMIN CRUD - Added showtime ${row['movie']} @ ${row['theatre']} ${row['time']}',
+    );
   }
 
   static Future<void> deleteShowtime(String id) async {
-    final showtimes = await getShowtimes();
-    showtimes.removeWhere((s) => s['id'] == id);
-    await _setString(_showtimesKey, jsonEncode(showtimes));
-    debugPrint('⏰ SHOWTIME SERVICE - Deleted showtime: $id');
+    final list = await _readPrefsList();
+    list.removeWhere((s) => s['id'] == id);
+    await _setString(_showtimesKey, jsonEncode(list));
+    debugPrint('🛠️ ADMIN CRUD - Deleted showtime $id');
+  }
+
+  static Future<void> updateShowtime(
+    String id,
+    Map<String, dynamic> updated,
+  ) async {
+    final list = await _readPrefsList();
+    final i = list.indexWhere((s) => s['id'] == id);
+    if (i >= 0) {
+      final row = Map<String, dynamic>.from(updated);
+      row['id'] = id;
+      row['_adminLocal'] = true;
+      list[i] = row;
+      await _setString(_showtimesKey, jsonEncode(list));
+      debugPrint('🛠️ ADMIN CRUD - Edited showtime $id');
+    }
   }
 
   // Time-based filtering helper

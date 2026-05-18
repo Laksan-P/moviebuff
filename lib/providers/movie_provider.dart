@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 
+import '../services/customer_catalog_service.dart';
 import '../services/external_movie_service.dart';
 import '../services/local_db_service.dart';
+import '../services/showtime_service.dart';
 
 class MovieProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _movies = [];
@@ -36,10 +38,16 @@ class MovieProvider extends ChangeNotifier {
     final result = await ExternalMovieService.fetchMovies(
       forceRefresh: forceRefresh,
     );
-    _movies = result.movies;
+    _movies = await CustomerCatalogService.mergeCustomerMovies(
+      result.movies,
+    );
     _source = result.source;
     _fetchedAt = result.fetchedAt;
     _statusMessage = result.errorMessage;
+
+    await ShowtimeService.initShowtimes(
+      applySem1Templates: !_catalogueStyleMovies(_movies),
+    );
 
     final favs = await LocalDbService.getFavorites();
     _favorites = favs;
@@ -65,4 +73,30 @@ class MovieProvider extends ChangeNotifier {
 
   bool isFavorite(String title) =>
       _favorites.any((f) => f['title'] == title);
+
+  bool _catalogueStyleMovies(List<Map<String, dynamic>> list) {
+    if (list.isEmpty) return false;
+    return list.any(
+      (m) =>
+          (m['theatre']?.toString().trim() ?? '').isNotEmpty ||
+          (m['showtimes'] is List && (m['showtimes'] as List).isNotEmpty),
+    );
+  }
+
+  /// Re-merge local admin prefs with last external fetch (no forced network).
+  Future<void> refreshAfterAdminEdit() async {
+    final result = await ExternalMovieService.fetchMovies(
+      forceRefresh: false,
+    );
+    _movies = await CustomerCatalogService.mergeCustomerMovies(
+      result.movies,
+    );
+    await ShowtimeService.initShowtimes(
+      applySem1Templates: !_catalogueStyleMovies(_movies),
+    );
+    debugPrint(
+      '🔄 CUSTOMER CATALOGUE - Refreshed after admin changes',
+    );
+    notifyListeners();
+  }
 }
