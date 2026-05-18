@@ -23,6 +23,9 @@ class TheatreCatalogUtils {
     if (k.contains('pvr') && k.contains('galle face')) {
       return 'One Galle Face Mall, Colombo';
     }
+    if (k.contains('liberty') && k.contains('cinema')) {
+      return 'Kollupitiya, Colombo';
+    }
     if (k.contains('liberty') && k.contains('scope')) {
       return 'Kollupitiya, Colombo';
     }

@@ -51,12 +51,17 @@ class TheatreService {
     return decoded.map((t) => Map<String, dynamic>.from(t)).toList();
   }
 
-  // Add a theatre
+  // Add a theatre (marks as admin-managed local row).
   static Future<void> addTheatre(Map<String, dynamic> theatre) async {
     final theatres = await getTheatres();
-    theatres.add(theatre);
+    theatres.removeWhere(
+      (t) => t['name'] == theatre['name'] && t['_adminLocal'] == true,
+    );
+    final row = Map<String, dynamic>.from(theatre);
+    row['_adminLocal'] = true;
+    theatres.add(row);
     await _setString(_theatresKey, jsonEncode(theatres));
-    debugPrint('🎭 THEATRE SERVICE - Added: ${theatre['name']}');
+    debugPrint('🛠️ ADMIN CRUD - Added theatre: ${row['name']}');
   }
 
   // Update a theatre
@@ -66,9 +71,13 @@ class TheatreService {
   ) async {
     final theatres = await getTheatres();
     if (index >= 0 && index < theatres.length) {
-      theatres[index] = updatedTheatre;
+      final merged = Map<String, dynamic>.from(updatedTheatre);
+      if (theatres[index]['_adminLocal'] == true) {
+        merged['_adminLocal'] = true;
+      }
+      theatres[index] = merged;
       await _setString(_theatresKey, jsonEncode(theatres));
-      debugPrint('🎭 THEATRE SERVICE - Updated: ${updatedTheatre['name']}');
+      debugPrint('🛠️ ADMIN CRUD - Updated theatre: ${merged['name']}');
     }
   }
 
@@ -78,7 +87,17 @@ class TheatreService {
     if (index >= 0 && index < theatres.length) {
       final removed = theatres.removeAt(index);
       await _setString(_theatresKey, jsonEncode(theatres));
-      debugPrint('🎭 THEATRE SERVICE - Removed: ${removed['name']}');
+      debugPrint(
+        '🛠️ ADMIN CRUD - Deleted theatre: ${removed['name']}',
+      );
+    }
+  }
+
+  static Future<void> removeTheatreByName(String name) async {
+    final theatres = await getTheatres();
+    final index = theatres.indexWhere((t) => t['name'] == name);
+    if (index >= 0) {
+      await removeTheatre(index);
     }
   }
 }

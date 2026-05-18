@@ -92,12 +92,17 @@ class MovieService {
     }).toList();
   }
 
-  // Add a movie
+  // Add a movie (admin UI — marks row as locally managed).
   static Future<void> addMovie(Map<String, dynamic> movie) async {
     final movies = await getMovies();
-    movies.add(movie);
+    final m = Map<String, dynamic>.from(movie);
+    m['_adminLocal'] = true;
+    movies.removeWhere(
+      (x) => x['title'] == m['title'] && x['_adminLocal'] == true,
+    );
+    movies.add(m);
     await _setString(_moviesKey, jsonEncode(movies));
-    debugPrint('🎬 MOVIE SERVICE - Added: ${movie['title']}');
+    debugPrint('🛠️ ADMIN CRUD - Added movie: ${m['title']}');
   }
 
   // Remove a movie by title
@@ -105,7 +110,7 @@ class MovieService {
     final movies = await getMovies();
     movies.removeWhere((m) => m['title'] == title);
     await _setString(_moviesKey, jsonEncode(movies));
-    debugPrint('🎬 MOVIE SERVICE - Removed: $title');
+    debugPrint('🛠️ ADMIN CRUD - Deleted movie: $title');
   }
 
   // Update a movie
@@ -116,9 +121,13 @@ class MovieService {
     final movies = await getMovies();
     final index = movies.indexWhere((m) => m['title'] == oldTitle);
     if (index != -1) {
-      movies[index] = updatedMovie;
+      final merged = Map<String, dynamic>.from(updatedMovie);
+      if (movies[index]['_adminLocal'] == true) {
+        merged['_adminLocal'] = true;
+      }
+      movies[index] = merged;
       await _setString(_moviesKey, jsonEncode(movies));
-      debugPrint('🎬 MOVIE SERVICE - Updated: ${updatedMovie['title']}');
+      debugPrint('🛠️ ADMIN CRUD - Updated movie: ${merged['title']}');
     }
   }
 }

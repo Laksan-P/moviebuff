@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+
+import '../../providers/movie_provider.dart';
+import '../../services/admin_catalog_service.dart';
 import '../../services/theatre_service.dart';
 
 class AdminTheatresScreen extends StatefulWidget {
@@ -10,32 +14,13 @@ class AdminTheatresScreen extends StatefulWidget {
 }
 
 class _AdminTheatresScreenState extends State<AdminTheatresScreen> {
-  List<Map<String, dynamic>> _theatres = [];
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadTheatres();
-  }
-
-  Future<void> _loadTheatres() async {
-    final theatres = await TheatreService.getTheatres();
-    if (mounted) {
-      setState(() {
-        _theatres = theatres;
-        _isLoading = false;
-      });
-    }
-  }
-
-  void _showTheatreDialog({Map<String, dynamic>? theatre, int? index}) {
-    final nameController = TextEditingController(text: theatre?['name']);
+  void _showTheatreDialog({Map<String, dynamic>? theatre}) {
+    final nameController = TextEditingController(text: theatre?['name']?.toString());
     final locationController = TextEditingController(
-      text: theatre?['location'],
+      text: theatre?['location']?.toString(),
     );
     final descriptionController = TextEditingController(
-      text: theatre?['description'] ?? '',
+      text: theatre?['description']?.toString() ?? '',
     );
 
     showDialog(
@@ -61,16 +46,11 @@ class _AdminTheatresScreenState extends State<AdminTheatresScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-
               _buildFieldLabel('THEATRE NAME'),
               _buildTextField(nameController, 'Enter Name'),
-
               const SizedBox(height: 16),
               _buildFieldLabel('LOCATION'),
               _buildTextField(locationController, 'Enter Location'),
-
-              const SizedBox(height: 16),
-
               const SizedBox(height: 16),
               _buildFieldLabel('DESCRIPTION'),
               _buildTextField(
@@ -78,29 +58,39 @@ class _AdminTheatresScreenState extends State<AdminTheatresScreen> {
                 'Enter Description',
                 maxLines: 3,
               ),
-
               const SizedBox(height: 32),
-
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () async {
-                    if (nameController.text.isNotEmpty) {
-                      final newTheatre = {
-                        'name': nameController.text,
-                        'location': locationController.text,
-                        'description': descriptionController.text,
-                      };
+                    if (nameController.text.isEmpty) return;
+                    final newTheatre = {
+                      'name': nameController.text,
+                      'location': locationController.text,
+                      'description': descriptionController.text,
+                    };
 
-                      if (theatre == null) {
+                    if (theatre == null) {
+                      await TheatreService.addTheatre(newTheatre);
+                    } else {
+                      final src = theatre['_adminSource'] as String? ?? 'seed';
+                      if (src == 'catalogue') {
                         await TheatreService.addTheatre(newTheatre);
-                      } else if (index != null) {
-                        await TheatreService.updateTheatre(index, newTheatre);
+                      } else {
+                        final raw = await TheatreService.getTheatres();
+                        final idx = raw.indexWhere(
+                          (t) => t['name'] == theatre['name'],
+                        );
+                        if (idx >= 0) {
+                          await TheatreService.updateTheatre(idx, newTheatre);
+                        } else {
+                          await TheatreService.addTheatre(newTheatre);
+                        }
                       }
-
-                      if (context.mounted) Navigator.pop(context);
-                      _loadTheatres();
                     }
+
+                    if (context.mounted) Navigator.pop(context);
+                    if (context.mounted) setState(() {});
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).colorScheme.primary,
@@ -185,6 +175,38 @@ class _AdminTheatresScreenState extends State<AdminTheatresScreen> {
     );
   }
 
+  Future<void> _confirmDelete(Map<String, dynamic> theatre) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Delete'),
+        content: Text(
+          'Are you sure you want to remove "${theatre['name']}" from the admin list?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    final src = theatre['_adminSource'] as String? ?? 'seed';
+    if (src == 'catalogue') {
+      await AdminCatalogService.suppressTheatre(theatre['name'] as String);
+    } else {
+      await TheatreService.removeTheatreByName(theatre['name'] as String);
+    }
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -198,95 +220,101 @@ class _AdminTheatresScreenState extends State<AdminTheatresScreen> {
         backgroundColor: Theme.of(context).colorScheme.primary,
         child: Icon(Icons.add, color: Theme.of(context).colorScheme.onPrimary),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView.separated(
-              padding: const EdgeInsets.all(20),
-              itemCount: _theatres.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final theatre = _theatres[index];
-                return Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+      body: Consumer<MovieProvider>(
+        builder: (context, prov, _) {
+          return FutureBuilder<List<Map<String, dynamic>>>(
+            future: AdminCatalogService.mergeTheatresForAdmin(prov.movies),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final theatres = snapshot.data!;
+              if (theatres.isEmpty) {
+                return Center(
+                  child: Text(
+                    'No theatres in this view',
+                    style: GoogleFonts.outfit(
+                      fontSize: 16,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              theatre['name'] as String,
-                              style: GoogleFonts.outfit(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            Text(
-                              theatre['location'] as String,
-                              style: GoogleFonts.outfit(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurfaceVariant,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
+                );
+              }
+              return RefreshIndicator(
+                onRefresh: () async {
+                  await prov.load(forceRefresh: true);
+                  if (context.mounted) setState(() {});
+                },
+                child: ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 96),
+                  itemCount: theatres.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final theatre = theatres[index];
+                    return Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.blue),
-                        onPressed: () =>
-                            _showTheatreDialog(theatre: theatre, index: index),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () async {
-                          final confirm = await showDialog<bool>(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: const Text('Confirm Delete'),
-                              content: Text(
-                                'Are you sure you want to delete "${theatre['name']}"? This cannot be undone.',
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () =>
-                                      Navigator.pop(context, false),
-                                  child: const Text('Cancel'),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  theatre['name']?.toString() ?? '',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.outfit(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
                                 ),
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context, true),
-                                  child: const Text(
-                                    'Delete',
-                                    style: TextStyle(color: Colors.red),
+                                const SizedBox(height: 4),
+                                Text(
+                                  theatre['location']?.toString() ?? '',
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.outfit(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                    fontSize: 14,
                                   ),
                                 ),
                               ],
                             ),
-                          );
-
-                          if (confirm == true) {
-                            await TheatreService.removeTheatre(index);
-                            _loadTheatres();
-                          }
-                        },
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.edit, color: Colors.blue),
+                            onPressed: () =>
+                                _showTheatreDialog(theatre: theatre),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () => _confirmDelete(theatre),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                );
-              },
-            ),
+                    );
+                  },
+                ),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }

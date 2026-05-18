@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../services/booking_service.dart';
+import 'package:provider/provider.dart';
+
+import '../../providers/movie_provider.dart';
+import '../../services/admin_catalog_service.dart';
 import 'admin_movies_screen.dart';
 import 'admin_showtimes_screen.dart';
 import 'admin_bookings_screen.dart';
 import 'admin_theatres_screen.dart';
 import 'admin_cancellations_screen.dart';
 import '../../services/auth_service.dart';
-import '../../services/movie_service.dart';
-import '../../services/theatre_service.dart';
+import '../../services/booking_service.dart';
 import '../login_screen.dart';
 import '../../core/theme/app_colors.dart';
 import '../../utils/text_safety.dart';
@@ -36,13 +38,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _loadDashboardData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _loadDashboardData();
+    });
   }
 
   Future<void> _loadDashboardData() async {
+    final movieProv = context.read<MovieProvider>();
+    final catalogueMovies = movieProv.movies;
+
     final bookings = await BookingService.getBookings();
-    final movies = await MovieService.getMovies();
-    final theatres = await TheatreService.getTheatres();
+    final movies =
+        await AdminCatalogService.mergeMoviesForAdmin(catalogueMovies);
+    final theatres =
+        await AdminCatalogService.mergeTheatresForAdmin(catalogueMovies);
 
     int total = 0;
     int confirmed = 0;
@@ -271,7 +280,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           MaterialPageRoute(
                             builder: (_) => const AdminTheatresScreen(),
                           ),
-                        );
+                        ).then((_) => _loadDashboardData());
                       }),
                       const SizedBox(height: 16),
                       _buildActionButton('Manage Showtimes', () {
@@ -398,25 +407,35 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text(
-                'Theatre Management',
-                style: GoogleFonts.outfit(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onTertiaryContainer,
+              Expanded(
+                child: Text(
+                  'Theatre Management',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.outfit(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onTertiaryContainer,
+                  ),
                 ),
               ),
-              GestureDetector(
-                onTap: () {
+              const SizedBox(width: 8),
+              TextButton(
+                onPressed: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) => const AdminTheatresScreen(),
                     ),
-                  );
+                  ).then((_) => _loadDashboardData());
                 },
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
                 child: Text(
                   'View All →',
                   style: GoogleFonts.outfit(
@@ -452,7 +471,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   MaterialPageRoute(
                     builder: (_) => const AdminTheatresScreen(),
                   ),
-                );
+                ).then((_) => _loadDashboardData());
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.primary,
@@ -481,25 +500,35 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text(
-                'Movie Management',
-                style: GoogleFonts.outfit(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onTertiaryContainer,
+              Expanded(
+                child: Text(
+                  'Movie Management',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.outfit(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onTertiaryContainer,
+                  ),
                 ),
               ),
-              GestureDetector(
-                onTap: () {
+              const SizedBox(width: 8),
+              TextButton(
+                onPressed: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) => const AdminMoviesScreen(),
                     ),
-                  );
+                  ).then((_) => _loadDashboardData());
                 },
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
                 child: Text(
                   'View All →',
                   style: GoogleFonts.outfit(
@@ -535,7 +564,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const AdminMoviesScreen()),
-                );
+                ).then((_) => _loadDashboardData());
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.primary,
