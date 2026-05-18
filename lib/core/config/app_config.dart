@@ -23,12 +23,10 @@ class AppConfig {
 
   /// External JSON over the internet (master list of movies).
   ///
-  /// Leave as the placeholder below until you upload your own movies.json
-  /// to GitHub (or anywhere else). While it's a placeholder, the app will
-  /// skip the network call and use the bundled JSON directly — no HTTP 404.
-  static const String externalMoviesUrl = '<PLACEHOLDER>';
-  // Example once you publish:
-  // 'https://raw.githubusercontent.com/<owner>/<repo>/main/movies.json';
+  /// When set to a valid `http(s)` URL, the app fetches this list first, then
+  /// falls back to **sqflite cache**, then **bundled** [localMoviesAsset].
+  static const String externalMoviesUrl =
+      'https://raw.githubusercontent.com/Laksan-P/moviebuff/refs/heads/main/external_movies.json';
 
   /// Local bundled asset used as offline fallback when the network is down
   /// or the external URL is unreachable.

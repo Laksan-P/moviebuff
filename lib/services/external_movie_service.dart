@@ -46,9 +46,9 @@ class ExternalMovieService {
     }
 
     if (!forceRefresh) {
-      debugPrint('🌐 EXTERNAL - Attempting fresh fetch from network');
+      debugPrint('🌐 EXTERNAL - Loading from external JSON');
     } else {
-      debugPrint('🌐 EXTERNAL - Force refresh requested');
+      debugPrint('🌐 EXTERNAL - Loading from external JSON (force refresh)');
     }
 
     try {
@@ -61,7 +61,9 @@ class ExternalMovieService {
           final list = decoded
               .map((e) => Map<String, dynamic>.from(e as Map))
               .toList();
-          debugPrint('🌐 EXTERNAL - OK ${list.length} movies from network');
+          debugPrint(
+            '✅ EXTERNAL - Loaded ${list.length} movies from live JSON',
+          );
           await LocalDbService.writeMovieCache(_cacheKey, list);
           return ExternalMoviesResult(
             movies: list,
@@ -78,6 +80,8 @@ class ExternalMovieService {
     } catch (e) {
       debugPrint('🌐 EXTERNAL - Network error: $e');
     }
+
+    debugPrint('⚠️ EXTERNAL - Failed, using cache/offline fallback');
 
     // ---- Fallback 1: sqflite cache ----
     final cached = await LocalDbService.readMovieCache(_cacheKey);
