@@ -341,6 +341,8 @@ class _HomeTabPageState extends State<_HomeTabPage>
     }
   }
 
+
+  // Home Tab Page Build Method Gets Movies From MovieProvider
   @override
   Widget build(BuildContext context) {
     super.build(context);
