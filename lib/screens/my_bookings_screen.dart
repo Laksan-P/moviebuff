@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/auth_service.dart';
+import '../services/booking_service.dart';
 import '../services/local_db_service.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/cinematic_background.dart';
@@ -23,6 +24,12 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    BookingService.refresh.addListener(_onBookingsRefreshSignal);
+    _loadBookings();
+  }
+
+  void _onBookingsRefreshSignal() {
+    if (!mounted) return;
     _loadBookings();
   }
 
@@ -48,6 +55,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
 
   @override
   void dispose() {
+    BookingService.refresh.removeListener(_onBookingsRefreshSignal);
     _tabController.dispose();
     super.dispose();
   }
@@ -235,8 +243,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
           _buildInfoRow('Tickets:', booking['tickets'] ?? '1'),
           _buildInfoRow('Booking Date:', booking['bookingDate'] ?? 'N/A'),
           _buildInfoRow(
-            'Sync:',
-            booking['synced'] == true ? 'Synced' : 'Unsynced',
+            'Storage:',
+            booking['synced'] == true ? 'Cloud Saved' : 'Saved Locally',
           ),
           const SizedBox(height: 20),
           // Total Amount Gray Box
@@ -390,8 +398,10 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                         '${booking['status'] ?? 'Unknown'}',
                       ),
                       _buildDetailItem(
-                        'Local sync',
-                        booking['synced'] == true ? 'Synced' : 'Unsynced',
+                        'Storage',
+                        booking['synced'] == true
+                            ? 'Cloud Saved'
+                            : 'Saved Locally',
                       ),
                       const SizedBox(height: 16),
                     ],

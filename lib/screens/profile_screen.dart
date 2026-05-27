@@ -14,6 +14,7 @@ import '../widgets/theme_toggle_button.dart';
 import '../services/local_db_service.dart';
 import '../services/profile_details_service.dart';
 import '../services/profile_photo_service.dart';
+import '../services/booking_service.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/cinematic_background.dart';
 import 'login_screen.dart';
@@ -35,6 +36,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   int _bookingCount = 0;
   AuthProvider? _authForListener;
   MovieProvider? _movieProvForListener;
+  VoidCallback? _bookingRefreshListener;
 
   @override
   void initState() {
@@ -72,6 +74,13 @@ class _ProfileScreenState extends State<ProfileScreen>
     final movieProv = context.read<MovieProvider>();
     _movieProvForListener ??= movieProv..addListener(_onMovieProvChanged);
 
+    _bookingRefreshListener ??= _onBookingsRefreshSignal;
+    BookingService.refresh.addListener(_bookingRefreshListener!);
+
+    _scheduleProfileReload();
+  }
+
+  void _onBookingsRefreshSignal() {
     _scheduleProfileReload();
   }
 
@@ -96,6 +105,9 @@ class _ProfileScreenState extends State<ProfileScreen>
     WidgetsBinding.instance.removeObserver(this);
     _authForListener?.removeListener(_onAuthSessionChanged);
     _movieProvForListener?.removeListener(_onMovieProvChanged);
+    if (_bookingRefreshListener != null) {
+      BookingService.refresh.removeListener(_bookingRefreshListener!);
+    }
     super.dispose();
   }
 

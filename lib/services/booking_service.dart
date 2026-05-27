@@ -4,8 +4,21 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'local_db_service.dart';
 
+/// Lightweight listenable used by booking screens to reload after changes.
+class BookingRefreshNotifier extends ChangeNotifier {
+  void notifyBookingsChanged() {
+    debugPrint('📑 BOOKINGS - refresh signal');
+    notifyListeners();
+  }
+}
+
 class BookingService {
   static const String _bookingsKey = 'movie_bookings';
+
+  /// Subscribe from [MyBookingsScreen] / [ProfileScreen] to auto-reload lists.
+  static final BookingRefreshNotifier refresh = BookingRefreshNotifier();
+
+  static void notifyBookingsChanged() => refresh.notifyBookingsChanged();
 
   // Unified storage helpers using SharedPreferences
   static Future<void> _setString(String key, String value) async {
@@ -63,6 +76,7 @@ class BookingService {
     debugPrint(
       '💾 BOOKING STORAGE - Save Status: ${verify == jsonString ? "OK" : "ERROR"}',
     );
+    notifyBookingsChanged();
   }
 
   // Get bookings (optionally filtered by user email)
@@ -130,6 +144,7 @@ class BookingService {
 
     await _setString(_bookingsKey, jsonEncode(bookings));
     await _syncSqfliteStatus(bookingId.toString(), 'Cancellation Requested');
+    notifyBookingsChanged();
   }
 
   // Approve a cancellation
