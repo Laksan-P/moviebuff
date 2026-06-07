@@ -186,6 +186,37 @@ class LocalDbService {
     return DateTime.fromMillisecondsSinceEpoch(rows.first['fetched_at'] as int);
   }
 
+  /// JSON object cache for arbitrary keyed payloads.
+  static Future<void> writeObjectCache(
+    String source,
+    Map<String, dynamic> payload,
+  ) async {
+    final db = await _database();
+    await db.delete(_cacheTable, where: 'source = ?', whereArgs: [source]);
+    await db.insert(_cacheTable, {
+      'source': source,
+      'payload': jsonEncode(payload),
+      'fetched_at': DateTime.now().millisecondsSinceEpoch,
+    });
+    debugPrint('🗄️ SQFLITE - Cached object for source: $source');
+  }
+
+  static Future<Map<String, dynamic>?> readObjectCache(String source) async {
+    final db = await _database();
+    final rows = await db.query(
+      _cacheTable,
+      where: 'source = ?',
+      whereArgs: [source],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    final raw = rows.first['payload'] as String;
+    final decoded = jsonDecode(raw);
+    if (decoded is! Map) return null;
+    debugPrint('🗄️ SQFLITE - Loaded object cache for $source');
+    return Map<String, dynamic>.from(decoded);
+  }
+
   // ---------- Bookings ----------
 
   static double _parseAmount(dynamic raw) {

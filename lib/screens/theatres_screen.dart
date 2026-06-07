@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../providers/connectivity_provider.dart';
 import '../providers/movie_provider.dart';
 import '../services/customer_catalog_service.dart';
 import '../widgets/cinematic_background.dart';
@@ -15,6 +16,21 @@ class TheatresScreen extends StatefulWidget {
 }
 
 class _TheatresScreenState extends State<TheatresScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final prov = context.read<MovieProvider>();
+      if (!prov.catalogueReady && !prov.loading) {
+        debugPrint('🔄 CATALOGUE - TheatresScreen triggering load');
+        final online = context.read<ConnectivityProvider>().isOnline;
+        // ignore: unawaited_futures
+        prov.load(isOnline: online);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;

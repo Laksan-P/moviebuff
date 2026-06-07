@@ -1,10 +1,9 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-import 'local_db_service.dart';
+import 'api_mappers.dart';
+import 'api_service.dart';
+import 'showtime_service.dart';
 
-/// Lightweight listenable used by booking screens to reload after changes.
 class BookingRefreshNotifier extends ChangeNotifier {
   void notifyBookingsChanged() {
     debugPrint('📑 BOOKINGS - refresh signal');
@@ -12,229 +11,173 @@ class BookingRefreshNotifier extends ChangeNotifier {
   }
 }
 
+/// Bookings loaded and mutated exclusively through the Laravel API.
 class BookingService {
-  static const String _bookingsKey = 'movie_bookings';
-
-  /// Subscribe from [MyBookingsScreen] / [ProfileScreen] to auto-reload lists.
   static final BookingRefreshNotifier refresh = BookingRefreshNotifier();
 
   static void notifyBookingsChanged() => refresh.notifyBookingsChanged();
 
-  // Unified storage helpers using SharedPreferences
-  static Future<void> _setString(String key, String value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(key, value);
-    debugPrint('💾 BOOKING STORAGE - Set $key: $value');
+  /// Customer UI only — hides bookings whose showtime date/time has passed.
+  static bool isPastShowtimeBooking(Map<String, dynamic> booking) {
+    final date = booking['date']?.toString().trim() ?? '';
+    final time = booking['time']?.toString().trim() ?? '';
+    if (date.isEmpty) return false;
+    return ShowtimeService.isShowtimePassed(time, date);
   }
 
-  static Future<String?> _getString(String key) async {
-    final prefs = await SharedPreferences.getInstance();
-    final value = prefs.getString(key);
-    debugPrint('💾 BOOKING STORAGE - Get $key: $value');
-    return value;
-  }
-
-  static Future<void> _syncSqfliteStatus(
-    String bookingId,
-    String status,
-  ) async {
-    final id = int.tryParse(bookingId.toString().trim());
-    if (id == null) return;
-    try {
-      await LocalDbService.updateBookingStatus(id, status);
-    } catch (e) {
-      debugPrint('⚠️ BOOKING — sqflite status sync failed for id=$id: $e');
+  static List<Map<String, dynamic>> _visibleCustomerBookings(
+    List<Map<String, dynamic>> bookings,
+  ) {
+    final visible = <Map<String, dynamic>>[];
+    var hidden = 0;
+    for (final booking in bookings) {
+      if (isPastShowtimeBooking(booking)) {
+        hidden++;
+        debugPrint(
+          '📑 BOOKINGS - hidden past showtime id=${booking['id']} '
+          '${booking['movie']} ${booking['date']} ${booking['time']}',
+        );
+        continue;
+      }
+      visible.add(booking);
     }
+    if (hidden > 0) {
+      debugPrint('📑 BOOKINGS - hid $hidden past-showtime booking(s)');
+    }
+    return visible;
   }
 
-  // Save a new booking
-  static Future<void> saveBooking(
+  static Future<List<Map<String, dynamic>>> getBookings({
+    String? userEmail,
+    bool admin = false,
+  }) async {
+    var bookings = admin
+        ? await ApiService.fetchAllBookings()
+        : await ApiService.fetchMyBookings();
+
+    for (final booking in bookings) {
+      ApiMappers.logBookingStatus(booking);
+    }
+
+    if (userEmail != null && userEmail.isNotEmpty && userEmail != 'Unknown') {
+      bookings = bookings
+          .where(
+            (b) =>
+                (b['email'] ?? '').toString().toLowerCase() ==
+                userEmail.toLowerCase(),
+          )
+          .toList();
+    }
+
+    if (admin) return bookings;
+    return _visibleCustomerBookings(bookings);
+  }
+
+  static Future<Map<String, dynamic>> saveBooking(
     Map<String, dynamic> booking, {
     String? clientBookingId,
   }) async {
-    final bookingsJson = await _getString(_bookingsKey) ?? '[]';
-    final List<dynamic> bookings = jsonDecode(bookingsJson);
-
-    // Add current timestamp for "Booking Date"
-    final now = DateTime.now();
-    booking['bookingDate'] =
-        '${_getMonth(now.month)} ${now.day.toString().padLeft(2, '0')}, ${now.year}';
-    booking['status'] = 'Confirmed';
-    if (clientBookingId != null && clientBookingId.isNotEmpty) {
-      booking['id'] = clientBookingId;
-    } else {
-      booking['id'] = DateTime.now().millisecondsSinceEpoch.toString();
-    }
-
-    bookings.add(booking);
-
-    final jsonString = jsonEncode(bookings);
-    await _setString(_bookingsKey, jsonString);
-
-    // Immediate verification
-    final verify = await _getString(_bookingsKey);
-    debugPrint(
-      '💾 BOOKING STORAGE - Save Status: ${verify == jsonString ? "OK" : "ERROR"}',
+    final showtimeId = int.parse(
+      (booking['showtime_id'] ?? booking['showtimeId']).toString(),
     );
+    final seats = booking['seats']?.toString() ?? '';
+    final tickets = int.tryParse(booking['tickets']?.toString() ?? '') ??
+        seats.split(',').where((s) => s.trim().isNotEmpty).length;
+
+    final created = await ApiService.createBooking(
+      showtimeId: showtimeId,
+      seats: seats,
+      numberOfTickets: tickets,
+    );
+
+    final confirmed = await ApiService.confirmBookingPayment(
+      int.parse(created['id'].toString()),
+      paymentMethod: booking['payment_method']?.toString() ?? 'credit_card',
+      cardNumber: booking['card_number']?.toString(),
+    );
+
     notifyBookingsChanged();
+    return confirmed;
   }
 
-  // Get bookings (optionally filtered by user email)
-  static Future<List<Map<String, dynamic>>> getBookings({
+  static Future<List<Map<String, dynamic>>> reloadBookings({
     String? userEmail,
+    bool admin = false,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.reload();
-    final bookingsJson = prefs.getString(_bookingsKey) ?? '[]';
-    final List<dynamic> decoded = jsonDecode(bookingsJson);
-
-    List<Map<String, dynamic>> allBookings = decoded
-        .map((b) => Map<String, dynamic>.from(b))
-        .toList();
-
-    if (userEmail != null && userEmail != 'Unknown') {
-      return allBookings.where((b) => b['email'] == userEmail).toList();
-    }
-
-    return allBookings;
+    final bookings = await getBookings(userEmail: userEmail, admin: admin);
+    notifyBookingsChanged();
+    return bookings;
   }
 
-  // Request a cancellation (moves to Pending)
-  static Future<void> requestCancellation(
+  static Future<Map<String, dynamic>> requestCancellation(
     String bookingId,
     String reason,
     String comment,
   ) async {
-    final bookingsJson = await _getString(_bookingsKey) ?? '[]';
-    final List<dynamic> bookings = jsonDecode(bookingsJson);
-
-    debugPrint(
-      '💾 BOOKING SERVICE - Requesting cancellation for ID: "$bookingId"',
+    final updated = await ApiService.requestCancellation(
+      int.parse(bookingId),
+      reason: reason,
+      comments: comment,
     );
-    bool found = false;
-    for (var b in bookings) {
-      final currentId = b['id']?.toString().trim();
-      final targetId = bookingId.toString().trim();
+    ApiMappers.logBookingStatus(updated);
+    debugPrint(
+      '🚫 BOOKING CANCEL - booking $bookingId → '
+      'status=${updated['_api_status']}',
+    );
+    notifyBookingsChanged();
+    return updated;
+  }
 
-      if (currentId == targetId) {
-        b['status'] = 'Cancellation Requested';
-        b['cancellationReason'] = reason;
-        b['cancellationComment'] = comment;
-        b['cancellationRequestedDate'] = DateTime.now().toIso8601String();
-        found = true;
-        debugPrint('✅ BOOKING SERVICE - Found and updated booking: $targetId');
-
-        // Calculate refund and fee (50/50 rule)
-        String rawAmt = b['amount'].toString().replaceAll(
-          RegExp(r'[^0-9.]'),
-          '',
-        );
-        double amount = double.tryParse(rawAmt) ?? 0.0;
-        b['refundAmount'] = (amount * 0.5).toStringAsFixed(2);
-        b['cancellationFee'] = (amount * 0.5).toStringAsFixed(2);
-        break;
-      }
-    }
-
-    if (!found) {
-      debugPrint(
-        '⚠️ BOOKING SERVICE - ID $bookingId NOT FOUND for cancellation',
-      );
-    }
-
-    await _setString(_bookingsKey, jsonEncode(bookings));
-    await _syncSqfliteStatus(bookingId.toString(), 'Cancellation Requested');
+  static Future<void> approveCancellation(String bookingId) async {
+    await ApiService.approveCancellation(int.parse(bookingId));
     notifyBookingsChanged();
   }
 
-  // Approve a cancellation
-  static Future<void> approveCancellation(String bookingId) async {
-    final bookingsJson = await _getString(_bookingsKey) ?? '[]';
-    final List<dynamic> bookings = jsonDecode(bookingsJson);
-
-    for (var b in bookings) {
-      if (b['id'].toString() == bookingId.toString()) {
-        b['status'] = 'Cancelled';
-        b['cancellationApprovedDate'] = DateTime.now().toIso8601String();
-        break;
-      }
-    }
-
-    await _setString(_bookingsKey, jsonEncode(bookings));
-    await _syncSqfliteStatus(bookingId.toString(), 'Cancelled');
-  }
-
-  // Reject a cancellation
   static Future<void> rejectCancellation(String bookingId) async {
-    final bookingsJson = await _getString(_bookingsKey) ?? '[]';
-    final List<dynamic> bookings = jsonDecode(bookingsJson);
-
-    for (var b in bookings) {
-      if (b['id'].toString() == bookingId.toString()) {
-        b['status'] = 'Confirmed'; // Revert to confirmed
-        break;
-      }
-    }
-
-    await _setString(_bookingsKey, jsonEncode(bookings));
-    await _syncSqfliteStatus(bookingId.toString(), 'Confirmed');
+    await ApiService.rejectCancellation(int.parse(bookingId));
+    notifyBookingsChanged();
   }
 
-  // Legacy cancel (direct to cancelled)
   static Future<void> cancelBooking(String bookingId) async {
-    final bookingsJson = await _getString(_bookingsKey) ?? '[]';
-    final List<dynamic> bookings = jsonDecode(bookingsJson);
-
-    for (var b in bookings) {
-      if (b['id'].toString() == bookingId.toString()) {
-        b['status'] = 'Cancelled';
-        break;
-      }
-    }
-
-    await _setString(_bookingsKey, jsonEncode(bookings));
-    await _syncSqfliteStatus(bookingId.toString(), 'Cancelled');
+    await ApiService.requestCancellation(
+      int.parse(bookingId),
+      reason: 'Cancelled by user',
+    );
+    notifyBookingsChanged();
   }
 
-  // Get occupied seats for a specific movie/theatre/date/time
   static Future<List<String>> getBookedSeats(
     String movie,
     String theatre,
     String date,
-    String time,
-  ) async {
-    final bookings = await getBookings();
-    final List<String> occupied = [];
-
-    for (var b in bookings) {
-      if (b['movie'] == movie &&
-          b['theatre'] == theatre &&
-          b['date'] == date &&
-          b['time'] == time &&
-          b['status'] == 'Confirmed') {
-        final seats = b['seats'] as String;
-        occupied.addAll(seats.split(', ').map((e) => e.trim()));
-      }
+    String time, {
+    int? showtimeId,
+  }) async {
+    if (showtimeId != null) {
+      return ApiService.fetchBookedSeats(showtimeId);
     }
 
-    return occupied;
+    final showtimes = await ApiService.fetchShowtimes();
+    final match = showtimes.where((st) {
+      return (st['movie'] ?? '').toString() == movie &&
+          (st['theatre'] ?? '').toString() == theatre &&
+          (st['date'] ?? '').toString() == date &&
+          (st['time'] ?? '').toString() == time;
+    }).toList();
+
+    if (match.isEmpty) return [];
+    final id = int.parse(match.first['id'].toString());
+    return ApiService.fetchBookedSeats(id);
   }
 
-  static String _getMonth(int month) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return months[month - 1];
+  static Future<List<Map<String, dynamic>>> getPendingCancellations() async {
+    final pending = await ApiService.fetchPendingCancellations();
+    debugPrint(
+      '🛠️ BOOKINGS - pending cancellations from API: ${pending.length}',
+    );
+    for (final booking in pending) {
+      ApiMappers.logBookingStatus(booking);
+    }
+    return pending;
   }
 }

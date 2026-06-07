@@ -6,6 +6,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:http/http.dart' as http;
 
 import '../core/config/app_config.dart';
+import '../utils/movie_catalog_utils.dart';
 import 'local_db_service.dart';
 import 'movie_catalog_sync_service.dart';
 
@@ -66,9 +67,7 @@ class ExternalMovieService {
       if (resp.statusCode == 200) {
         final decoded = jsonDecode(resp.body);
         if (decoded is List) {
-          final list = decoded
-              .map((e) => Map<String, dynamic>.from(e as Map))
-              .toList();
+          final list = _sanitizeMovieRows(decoded);
           debugPrint('LIVE JSON FETCH SUCCESS: ${list.length} movies');
           await LocalDbService.writeMovieCache(_cacheKey, list);
           await MovieCatalogSyncService.applyLiveExternalMovies(list);
@@ -95,10 +94,11 @@ class ExternalMovieService {
     final cached = await LocalDbService.readMovieCache(_cacheKey);
     if (cached != null && cached.isNotEmpty) {
       final ts = await LocalDbService.cacheTimestamp(_cacheKey);
+      final sanitized = _sanitizeMovieRows(cached);
       debugPrint('🌐 EXTERNAL - Using sqflite cache (ts: $ts)');
-      await MovieCatalogSyncService.applyLiveExternalMovies(cached);
+      await MovieCatalogSyncService.applyLiveExternalMovies(sanitized);
       return ExternalMoviesResult(
-        movies: cached,
+        movies: sanitized,
         source: MovieSource.cache,
         fetchedAt: ts,
         errorMessage: 'Showing cached data (network unavailable)',
@@ -111,12 +111,25 @@ class ExternalMovieService {
     );
   }
 
+  /// Bundled movie rows for poster enrichment / offline fallback.
+  static Future<List<Map<String, dynamic>>> loadBundledMovieList() async {
+    final result = await _loadBundled();
+    return result.movies;
+  }
+
+  static List<Map<String, dynamic>> _sanitizeMovieRows(List<dynamic> rows) {
+    return rows
+        .whereType<Map>()
+        .map((e) => MovieCatalogUtils.normalizeCustomerMovie(
+              Map<String, dynamic>.from(e),
+            ))
+        .toList();
+  }
+
   static Future<ExternalMoviesResult> _loadBundled({String? message}) async {
     debugPrint('🌐 EXTERNAL - Falling back to bundled asset JSON');
     final raw = await rootBundle.loadString(AppConfig.localMoviesAsset);
-    final list = (jsonDecode(raw) as List<dynamic>)
-        .map((e) => Map<String, dynamic>.from(e as Map))
-        .toList();
+    final list = _sanitizeMovieRows(jsonDecode(raw) as List<dynamic>);
     return ExternalMoviesResult(
       movies: list,
       source: MovieSource.asset,

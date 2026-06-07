@@ -7,9 +7,10 @@ import '../widgets/custom_button.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/premium_screen_stack.dart';
 import '../utils/movie_catalog_utils.dart';
+import '../widgets/movie_poster.dart';
 import 'movie_details_screen.dart';
-import '../services/showtime_service.dart';
 import '../providers/movie_provider.dart';
+import '../services/showtime_service.dart';
 
 class TheatreDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> theatre;
@@ -63,60 +64,74 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
     super.dispose();
   }
 
+  static dynamic _readField(Map<String, dynamic> row, String snake, String camel) {
+    return row[snake] ?? row[camel];
+  }
+
+  static bool _sameId(dynamic a, dynamic b) {
+    if (a == null || b == null) return false;
+    return a.toString() == b.toString();
+  }
+
   Future<void> _loadMovies() async {
     setState(() => _isLoading = true);
 
     final movieProv = context.read<MovieProvider>();
     final merged = movieProv.movies;
-    final allShowtimes =
-        await ShowtimeService.getCustomerShowtimes(merged);
+    final allShowtimes = movieProv.showtimes;
 
-    final targetTheatre = (widget.theatre['name'] as String).trim();
+    debugPrint('CURRENT THEATRE: ${widget.theatre['id']}');
+    debugPrint('TOTAL SHOWTIMES: ${movieProv.showtimes.length}');
 
-    debugPrint(
-      '🎭 THEATRE DETAILS - Loading showtimes for: ${widget.theatre['name']}',
-    );
-    debugPrint('🎭 Total showtimes in system: ${allShowtimes.length}');
-
-    bool movieBelongsToTheatre(Map<String, dynamic> movie) {
-      final assigned = (movie['theatre'] as String? ?? '').trim();
-      if (assigned.isNotEmpty) {
-        return MovieCatalogUtils.theatresLooselyMatch(assigned, targetTheatre);
-      }
-      return MovieCatalogUtils.theatresLooselyMatch(
-        MovieCatalogUtils.defaultExternalTheatre,
-        targetTheatre,
+    for (final s in movieProv.showtimes) {
+      debugPrint(
+        'SHOWTIME id=${s['id']} theatre_id=${s['theatre_id']} '
+        'theatreId=${s['theatreId']} movie_id=${s['movie_id']} '
+        'movieId=${s['movieId']}',
       );
     }
 
+    final targetTheatreId = widget.theatre['id'];
+    final targetTheatreName = (widget.theatre['name'] as String? ?? '').trim();
+
+    debugPrint(
+      '🎭 THEATRE DETAILS - Loading showtimes for: $targetTheatreName '
+      '(id=$targetTheatreId)',
+    );
+
+    final theatreShowtimes = allShowtimes.where((st) {
+      final stTheatreId = _readField(st, 'theatre_id', 'theatreId');
+      final matchesTheatre = _sameId(stTheatreId, targetTheatreId) ||
+          (stTheatreId == null &&
+              MovieCatalogUtils.theatresLooselyMatch(
+                (st['theatre'] as String? ?? '').trim(),
+                targetTheatreName,
+              ));
+      if (!matchesTheatre) return false;
+      return !ShowtimeService.isShowtimePassed(st['time'], st['date']);
+    }).toList();
+
+    debugPrint(
+      '🎭 Upcoming showtimes for theatre $targetTheatreId: '
+      '${theatreShowtimes.length}',
+    );
+
+    final movieIds = theatreShowtimes
+        .map((st) => _readField(st, 'movie_id', 'movieId')?.toString())
+        .whereType<String>()
+        .toSet();
+
+    final movieTitles = theatreShowtimes
+        .map((st) => (st['movie'] as String? ?? '').trim().toLowerCase())
+        .where((title) => title.isNotEmpty)
+        .toSet();
+
     final filteredMovies = merged.where((movie) {
-      final movieTitle =
-          (movie['title'] as String? ?? '').trim().toLowerCase();
+      final movieId = movie['id']?.toString();
+      if (movieId != null && movieIds.contains(movieId)) return true;
 
-      if (!movieBelongsToTheatre(movie)) return false;
-
-      final movieShowtimes = allShowtimes.where((st) {
-        final stMovie = (st['movie'] as String? ?? '').trim().toLowerCase();
-        final stTheatre = (st['theatre'] as String? ?? '').trim();
-        return stMovie == movieTitle &&
-            MovieCatalogUtils.theatresLooselyMatch(stTheatre, targetTheatre);
-      });
-
-      if (movieShowtimes.isNotEmpty) {
-        return movieShowtimes.any(
-          (st) => !ShowtimeService.isShowtimePassed(st['time'], st['date']),
-        );
-      }
-
-      final synthetic = ShowtimeService.buildExternalCatalogShowtimes(movie);
-      return synthetic.any(
-        (st) =>
-            !ShowtimeService.isShowtimePassed(st['time'], st['date']) &&
-            MovieCatalogUtils.theatresLooselyMatch(
-              st['theatre']?.toString() ?? '',
-              targetTheatre,
-            ),
-      );
+      final title = (movie['title'] as String? ?? '').trim().toLowerCase();
+      return movieTitles.contains(title);
     }).toList();
 
     debugPrint('🎭 Filtered movies for this theatre: ${filteredMovies.length}');
@@ -366,7 +381,12 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
                                       topLeft: Radius.circular(14),
                                       bottomLeft: Radius.circular(14),
                                     ),
-                                    child: _TheatreRowPoster(movie: movie),
+                                    child: MoviePoster(
+                                      movie: movie,
+                                      width: 110,
+                                      height: 160,
+                                      decodeWidth: 110,
+                                    ),
                                   ),
                                   Expanded(
                                     child: Padding(
@@ -453,111 +473,3 @@ class _TheatreDetailsScreenState extends State<TheatreDetailsScreen> {
   }
 }
 
-class _TheatreRowPoster extends StatefulWidget {
-  const _TheatreRowPoster({required this.movie});
-
-  final Map<String, dynamic> movie;
-
-  @override
-  State<_TheatreRowPoster> createState() => _TheatreRowPosterState();
-}
-
-class _TheatreRowPosterState extends State<_TheatreRowPoster> {
-  late final List<String> _urls;
-  int _index = 0;
-
-  static String? _httpUrl(dynamic v) {
-    final t = v?.toString().trim() ?? '';
-    if (t.isEmpty || t == 'null') return null;
-    if (t.startsWith('http')) return t;
-    return null;
-  }
-
-  String get _title => widget.movie['title']?.toString() ?? 'Movie';
-
-  @override
-  void initState() {
-    super.initState();
-    final img = _httpUrl(widget.movie['image']);
-    final poster = _httpUrl(widget.movie['posterUrl']);
-    _urls = [];
-    if (img != null) _urls.add(img);
-    if (poster != null && poster != img) _urls.add(poster);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    const w = 110.0;
-    const h = 160.0;
-
-    if (_index < _urls.length) {
-      final url = _urls[_index];
-      return Image.network(
-        url,
-        key: ValueKey<String>(url),
-        width: w,
-        height: h,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          MovieCatalogUtils.logPosterLoadFailed(_title, error);
-          final next = _index + 1;
-          if (next < _urls.length) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) setState(() => _index = next);
-            });
-          }
-          return _placeholder(context, w, h);
-        },
-      );
-    }
-
-    final asset = widget.movie['image']?.toString() ?? '';
-    if (asset.isNotEmpty && !asset.startsWith('http')) {
-      return Image.asset(
-        asset,
-        width: w,
-        height: h,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          MovieCatalogUtils.logPosterLoadFailed(_title, error);
-          return _placeholder(context, w, h);
-        },
-      );
-    }
-
-    return _placeholder(context, w, h);
-  }
-
-  Widget _placeholder(BuildContext context, double w, double h) {
-    return Container(
-      width: w,
-      height: h,
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      padding: const EdgeInsets.all(6),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.movie_outlined,
-            size: 28,
-            color: Theme.of(
-              context,
-            ).colorScheme.onSurfaceVariant.withValues(alpha: 0.45),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            _title,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.outfit(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

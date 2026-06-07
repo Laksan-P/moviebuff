@@ -12,7 +12,9 @@ class BookingScreen extends StatefulWidget {
   final String theatreName;
   final String selectedFormat;
   final String selectedLanguage;
-  /// Per-seat price from showtime / external JSON (defaults to 750).
+  /// Laravel showtime id used for seat availability and booking creation.
+  final int showtimeId;
+  /// Per-seat price from API showtime (defaults to 750).
   final double ticketPrice;
 
   const BookingScreen({
@@ -21,6 +23,7 @@ class BookingScreen extends StatefulWidget {
     required this.showtime,
     required this.showDate,
     required this.theatreName,
+    required this.showtimeId,
     this.selectedFormat = '2D',
     this.selectedLanguage = 'English',
     this.ticketPrice = 750.0,
@@ -48,6 +51,7 @@ class _BookingScreenState extends State<BookingScreen> {
       widget.theatreName,
       widget.showDate,
       widget.showtime,
+      showtimeId: widget.showtimeId,
     );
     setState(() {
       _bookedSeats = seats.toSet();
@@ -430,6 +434,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                     theatreName: widget.theatreName,
                                     showDate: widget.showDate,
                                     showTime: widget.showtime,
+                                    showtimeId: widget.showtimeId,
                                     ticketCount: _selectedSeats.length,
                                     amount: total.toStringAsFixed(2),
                                     selectedSeats: _selectedSeats.toList(),

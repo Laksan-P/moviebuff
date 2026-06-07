@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../services/auth_service.dart';
+import '../services/api_mappers.dart';
 import '../services/booking_service.dart';
-import '../services/local_db_service.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/cinematic_background.dart';
 import 'cancel_booking_screen.dart';
@@ -33,19 +32,27 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     _loadBookings();
   }
 
+  Future<void> reloadBookings() async {
+    await _loadBookings();
+    BookingService.notifyBookingsChanged();
+  }
+
   Future<void> _loadBookings() async {
-    final userEmail = await AuthService.getUserEmail() ?? '';
     try {
-      final bookings = await LocalDbService.getBookingsByUser(userEmail);
+      final bookings = await BookingService.getBookings();
       if (mounted) {
-        debugPrint('📑 MY BOOKINGS - Loaded ${bookings.length} from sqflite');
-        for (var b in bookings) {
+        debugPrint('📑 MY BOOKINGS - Loaded ${bookings.length} from API');
+        for (final b in bookings) {
+          ApiMappers.logBookingStatus(b);
           debugPrint(
-            '  - ${b['movie']} (ID: ${b['id']}, Status: ${b['status']})',
+            '  - ${b['movie']} (ID: ${b['id']}, '
+            'api=${b['_api_status']}, label=${b['status']})',
           );
         }
         setState(() => _bookings = bookings);
       }
+    } catch (e) {
+      debugPrint('📑 MY BOOKINGS - API error: $e');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -62,15 +69,10 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
 
   @override
   Widget build(BuildContext context) {
-    final activeBookings = _bookings
-        .where(
-          (b) => b['status'].toString().trim().toLowerCase() == 'confirmed',
-        )
-        .toList();
-    final cancelledBookings = _bookings.where((b) {
-      final s = b['status'].toString().trim().toLowerCase();
-      return s == 'cancelled' || s == 'cancellation requested';
-    }).toList();
+    final activeBookings =
+        _bookings.where(ApiMappers.isActiveBooking).toList();
+    final cancelledBookings =
+        _bookings.where(ApiMappers.isCancelledBooking).toList();
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -200,10 +202,13 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
   }
 
   Widget _buildBookingCard(Map<String, dynamic> booking) {
-    final status = booking['status'] ?? 'Unknown';
-    final statusLower = status.toLowerCase();
-    final bool isCancelled =
-        statusLower == 'cancelled' || statusLower == 'cancellation requested';
+    final statusKey = ApiMappers.effectiveBookingStatusKey(booking);
+    final badgeLabel = ApiMappers.bookingBadgeLabel(booking);
+    final statusColor = ApiMappers.bookingStatusColorForKey(statusKey);
+    final statusSubtitle = ApiMappers.bookingStatusSubtitle(booking);
+    final bool isCancelled = statusKey == 'cancelled';
+    final bool isCancellationPending = statusKey == 'cancellation_requested';
+    final bool canCancel = ApiMappers.canRequestCancellation(booking);
     final scheme = Theme.of(context).colorScheme;
 
     return Container(
@@ -284,30 +289,15 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Icon(
-                      Icons.circle,
-                      size: 8,
-                      color: status.toLowerCase() == 'cancelled'
-                          ? Colors.redAccent
-                          : status.toLowerCase() == 'cancellation requested'
-                          ? Colors.orangeAccent
-                          : const Color(0xFF4ADE80),
-                    ),
+                    Icon(Icons.circle, size: 8, color: statusColor),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        status.toLowerCase() == 'cancellation requested'
-                            ? 'PENDING REFUND'
-                            : status.toUpperCase(),
+                        badgeLabel,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.outfit(
-                          color: status.toLowerCase() == 'cancelled'
-                              ? Colors.redAccent
-                              : status.toLowerCase() ==
-                                    'cancellation requested'
-                              ? Colors.orangeAccent
-                              : const Color(0xFF4ADE80),
+                          color: statusColor,
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
                         ),
@@ -315,6 +305,17 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                     ),
                   ],
                 ),
+                if (statusSubtitle != null) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    statusSubtitle,
+                    style: GoogleFonts.outfit(
+                      color: scheme.onSurface.withValues(alpha: 0.72),
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -326,12 +327,25 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
               isOutlined: true,
             ),
             const SizedBox(height: 12),
-            CustomButton(
-              text: 'Cancel Booking',
-              onPressed: () => _confirmCancel(booking),
-              color: Theme.of(context).colorScheme.errorContainer,
-              textColor: Theme.of(context).colorScheme.onErrorContainer,
-            ),
+            if (isCancellationPending)
+              IgnorePointer(
+                child: Opacity(
+                  opacity: 0.72,
+                  child: CustomButton(
+                    text: 'Awaiting Admin Decision',
+                    onPressed: () {},
+                    color: scheme.surfaceContainerHighest,
+                    textColor: scheme.onSurface.withValues(alpha: 0.55),
+                  ),
+                ),
+              )
+            else if (canCancel)
+              CustomButton(
+                text: 'Cancel Booking',
+                onPressed: () => _confirmCancel(booking),
+                color: Theme.of(context).colorScheme.errorContainer,
+                textColor: Theme.of(context).colorScheme.onErrorContainer,
+              ),
           ],
         ],
       ),
@@ -395,7 +409,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                       ),
                       _buildDetailItem(
                         'Status',
-                        '${booking['status'] ?? 'Unknown'}',
+                        ApiMappers.bookingBadgeLabel(booking),
                       ),
                       _buildDetailItem(
                         'Storage',
@@ -480,10 +494,23 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
   }
 
   void _confirmCancel(Map<String, dynamic> booking) {
+    if (!ApiMappers.canRequestCancellation(booking)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'This booking already has a cancellation request pending.',
+          ),
+        ),
+      );
+      return;
+    }
+
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => CancelBookingScreen(booking: booking)),
-    ).then((_) => _loadBookings());
+    ).then((submitted) {
+      if (submitted == true) reloadBookings();
+    });
   }
 
   Widget _buildInfoRow(String label, String value) {

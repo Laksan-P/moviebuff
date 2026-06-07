@@ -12,13 +12,13 @@ import 'signup_screen.dart';
 import 'profile_screen.dart';
 import 'device_screen.dart';
 import '../services/auth_service.dart';
-import '../services/external_movie_service.dart';
+import '../providers/connectivity_provider.dart';
 import '../providers/movie_provider.dart';
 import '../utils/movie_catalog_utils.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/cinematic_background.dart';
 import '../widgets/keep_alive_tab.dart';
-import '../utils/poster_decode.dart';
+import '../widgets/movie_poster.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -275,14 +275,12 @@ class _HomeCatalogueSlice {
   const _HomeCatalogueSlice({
     required this.awaiting,
     required this.movies,
-    required this.source,
     required this.sourceLabel,
     required this.favoritesKey,
   });
 
   final bool awaiting;
   final List<Map<String, dynamic>> movies;
-  final MovieSource source;
   final String sourceLabel;
   final int favoritesKey;
 
@@ -290,7 +288,6 @@ class _HomeCatalogueSlice {
   bool operator ==(Object other) {
     return other is _HomeCatalogueSlice &&
         awaiting == other.awaiting &&
-        source == other.source &&
         sourceLabel == other.sourceLabel &&
         favoritesKey == other.favoritesKey &&
         identical(movies, other.movies);
@@ -300,7 +297,6 @@ class _HomeCatalogueSlice {
   int get hashCode => Object.hash(
         awaiting,
         movies,
-        source,
         sourceLabel,
         favoritesKey,
       );
@@ -332,6 +328,16 @@ class _HomeTabPageState extends State<_HomeTabPage>
   void initState() {
     super.initState();
     _loadUserName();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final prov = context.read<MovieProvider>();
+      final online = context.read<ConnectivityProvider>().isOnline;
+      if (!prov.catalogueReady && !prov.loading) {
+        debugPrint('🔄 CATALOGUE - HomeScreen triggering load');
+        // ignore: unawaited_futures
+        prov.load(isOnline: online);
+      }
+    });
   }
 
   Future<void> _loadUserName() async {
@@ -350,7 +356,6 @@ class _HomeTabPageState extends State<_HomeTabPage>
       selector: (_, p) => _HomeCatalogueSlice(
         awaiting: p.awaitingCatalogueUi,
         movies: p.movies,
-        source: p.source,
         sourceLabel: p.sourceLabel,
         favoritesKey: Object.hashAll(
           p.favorites.map((f) => f['title']?.toString() ?? ''),
@@ -504,7 +509,7 @@ class _HomeTabPageState extends State<_HomeTabPage>
 
                       const SizedBox(height: 40),
 
-                      // ───── External JSON master list (MAD II) ─────
+                      // ───── Merged catalogue: Laravel API + external JSON ─────
                       _buildExternalMoviesSection(
                         movieProv,
                         slice,
@@ -709,7 +714,6 @@ class _HomeTabPageState extends State<_HomeTabPage>
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    // Network (image → posterUrl via normalize) or asset fallback
                     _carouselPoster(context, movie),
                     // Gradient Overlay
                     Container(
@@ -867,22 +871,22 @@ class _HomeTabPageState extends State<_HomeTabPage>
   }
 
   Widget _carouselPoster(BuildContext context, Map<String, dynamic> movie) {
-    return _HomeCatalogPoster(
+    return MoviePoster(
       movie: movie,
-      boxFit: BoxFit.cover,
+      fit: BoxFit.cover,
       decodeWidth: 420,
     );
   }
 
   Widget _cataloguePosterTile(BuildContext context, Map<String, dynamic> m) {
-    return _HomeCatalogPoster(
+    return MoviePoster(
       movie: m,
-      boxFit: BoxFit.cover,
+      fit: BoxFit.cover,
       decodeWidth: 150,
     );
   }
 
-  // Scrollable master list driven by the external JSON (MAD II requirement).
+  // Scrollable master list: Laravel API movies merged with external JSON (MAD II).
   Widget _buildExternalMoviesSection(
     MovieProvider prov,
     _HomeCatalogueSlice slice,
@@ -920,22 +924,16 @@ class _HomeTabPageState extends State<_HomeTabPage>
     final headerColor = Theme.of(context).colorScheme.onSurface;
     final mutedColor = headerColor.withValues(alpha: 0.6);
 
-    String badgeLabel;
-    Color badgeColor;
-    switch (slice.source) {
-      case MovieSource.network:
-        badgeLabel = 'LIVE · external JSON';
-        badgeColor = const Color(0xFF10B981);
-        break;
-      case MovieSource.cache:
-        badgeLabel = 'CACHED · sqflite';
-        badgeColor = Theme.of(context).colorScheme.secondary;
-        break;
-      case MovieSource.asset:
-        badgeLabel = 'OFFLINE · bundled JSON';
-        badgeColor = Theme.of(context).colorScheme.error;
-        break;
-    }
+    final badgeLabel = slice.sourceLabel.contains('External JSON')
+        ? 'Laravel API + External JSON'
+        : slice.sourceLabel.contains('Laravel')
+            ? 'LIVE · Laravel API'
+            : 'OFFLINE · Local';
+    final badgeColor = slice.sourceLabel.contains('offline') ||
+            slice.sourceLabel.contains('Local JSON') ||
+            slice.sourceLabel.contains('bundled')
+        ? const Color(0xFFD97706)
+        : const Color(0xFF10B981);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -984,7 +982,7 @@ class _HomeTabPageState extends State<_HomeTabPage>
               ),
             ),
             IconButton(
-              tooltip: 'Refresh from internet',
+              tooltip: 'Refresh from API',
               icon: prov.awaitingCatalogueUi
                   ? const SizedBox(
                       width: 18,
@@ -995,7 +993,9 @@ class _HomeTabPageState extends State<_HomeTabPage>
               onPressed: prov.awaitingCatalogueUi
                   ? null
                   : () async {
-                      await prov.load(forceRefresh: true);
+                      final online =
+                          context.read<ConnectivityProvider>().isOnline;
+                      await prov.load(forceRefresh: true, isOnline: online);
                       if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
@@ -1184,122 +1184,3 @@ class _HomeTabPageState extends State<_HomeTabPage>
   }
 }
 
-/// Prefer `image`, then `posterUrl` on network failure; then local asset; then placeholder.
-class _HomeCatalogPoster extends StatefulWidget {
-  const _HomeCatalogPoster({
-    required this.movie,
-    required this.boxFit,
-    this.decodeWidth = 200,
-  });
-
-  final Map<String, dynamic> movie;
-  final BoxFit boxFit;
-  final double decodeWidth;
-
-  @override
-  State<_HomeCatalogPoster> createState() => _HomeCatalogPosterState();
-}
-
-class _HomeCatalogPosterState extends State<_HomeCatalogPoster> {
-  late final List<String> _urls;
-  int _index = 0;
-
-  static String? _httpUrl(dynamic v) {
-    final t = v?.toString().trim() ?? '';
-    if (t.isEmpty || t == 'null') return null;
-    if (t.startsWith('http')) return t;
-    return null;
-  }
-
-  String get _title => widget.movie['title']?.toString() ?? 'Movie';
-
-  @override
-  void initState() {
-    super.initState();
-    final img = _httpUrl(widget.movie['image']);
-    final poster = _httpUrl(widget.movie['posterUrl']);
-    _urls = [];
-    if (img != null) _urls.add(img);
-    if (poster != null && poster != img) _urls.add(poster);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final cacheW = posterDecodePixels(context, widget.decodeWidth);
-    if (_index < _urls.length) {
-      final url = _urls[_index];
-      return Image.network(
-        url,
-        key: ValueKey<String>(url),
-        fit: widget.boxFit,
-        width: double.infinity,
-        height: double.infinity,
-        cacheWidth: cacheW,
-        gaplessPlayback: true,
-        loadingBuilder: (context, child, progress) {
-          if (progress == null) return child;
-          return _placeholder(context);
-        },
-        errorBuilder: (context, error, stackTrace) {
-          MovieCatalogUtils.logPosterLoadFailed(_title, error);
-          final next = _index + 1;
-          if (next < _urls.length) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) setState(() => _index = next);
-            });
-          }
-          return _placeholder(context);
-        },
-      );
-    }
-
-    final asset = widget.movie['image']?.toString() ?? '';
-    if (asset.isNotEmpty && !asset.startsWith('http')) {
-      return Image.asset(
-        asset,
-        fit: widget.boxFit,
-        width: double.infinity,
-        height: double.infinity,
-        errorBuilder: (context, error, stackTrace) {
-          MovieCatalogUtils.logPosterLoadFailed(_title, error);
-          return _placeholder(context);
-        },
-      );
-    }
-
-    return _placeholder(context);
-  }
-
-  Widget _placeholder(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      padding: const EdgeInsets.all(8),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.movie_outlined,
-            size: 32,
-            color: Theme.of(
-              context,
-            ).colorScheme.onSurfaceVariant.withValues(alpha: 0.45),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            _title,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.outfit(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

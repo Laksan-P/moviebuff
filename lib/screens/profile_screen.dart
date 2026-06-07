@@ -11,10 +11,9 @@ import '../providers/movie_provider.dart';
 import '../services/auth_service.dart';
 import '../services/device_service.dart';
 import '../widgets/theme_toggle_button.dart';
-import '../services/local_db_service.dart';
 import '../services/profile_details_service.dart';
-import '../services/profile_photo_service.dart';
 import '../services/booking_service.dart';
+import '../services/profile_photo_service.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/cinematic_background.dart';
 import 'login_screen.dart';
@@ -126,8 +125,8 @@ class _ProfileScreenState extends State<ProfileScreen>
     var bookings = 0;
     if (mail.isNotEmpty) {
       try {
-        debugPrint('👤 PROFILE BOOKING COUNT SOURCE: sqflite/local storage');
-        final rows = await LocalDbService.getBookingsByUser(mail);
+        debugPrint('👤 PROFILE BOOKING COUNT SOURCE: Laravel API');
+        final rows = await BookingService.getBookings(userEmail: mail);
         bookings = rows.length;
       } catch (_) {
         bookings = 0;
@@ -648,8 +647,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                                   scheme.onPrimary,
                                   auth.source == AuthSource.api
                                       ? 'Signed in via SSP API'
-                                      : auth.source == AuthSource.local
-                                      ? 'Signed in locally (offline)'
                                       : 'Not signed in',
                                   Icons.verified_outlined,
                                 ),

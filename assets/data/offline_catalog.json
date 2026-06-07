@@ -1,0 +1,92 @@
+{
+  "movies": [
+    {
+      "id": 1,
+      "title": "Avengers: Endgame",
+      "genre": "Action/Sci-fi",
+      "rating": "PG-13",
+      "duration": 181,
+      "image": "https://image.tmdb.org/t/p/original/or06FN3Dka5tukK1e9sl16pB3iy.jpg",
+      "description": "After the devastating events of Infinity War, the universe is in ruins.",
+      "trailer_url": "https://www.youtube.com/watch?v=TcMBFSGZo1E",
+      "release_date": "2019-04-26",
+      "formats": ["2D", "3D", "IMAX"],
+      "languages": ["English", "Hindi", "Tamil"],
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "title": "Interstellar",
+      "genre": "Sci-Fi, Drama",
+      "rating": "PG-13",
+      "duration": 169,
+      "image": "https://mir-s3-cdn-cf.behance.net/project_modules/hd/8d8f28105415493.619ded067937d.jpg",
+      "description": "A team of explorers travel through a wormhole in space.",
+      "trailer_url": "https://www.youtube.com/watch?v=zSWdZVtXT7E",
+      "release_date": "2014-11-07",
+      "formats": ["2D", "IMAX"],
+      "languages": ["English", "Hindi"],
+      "is_active": true
+    },
+    {
+      "id": 3,
+      "title": "Dune",
+      "genre": "Sci-Fi, Adventure",
+      "rating": "PG-13",
+      "duration": 155,
+      "image": "https://m.media-amazon.com/images/M/MV5BNWIyNmU5MGYtZDZmNi00ZjAwLWJlYjgtZTc0ZGIxMDE4ZGYwXkEyXkFqcGc@._V1_.jpg",
+      "description": "A noble family becomes embroiled in a war for control over the galaxy's most valuable asset.",
+      "trailer_url": "https://www.youtube.com/watch?v=n9xhJrPXop4",
+      "release_date": "2021-10-22",
+      "formats": ["2D", "IMAX"],
+      "languages": ["English", "Hindi"],
+      "is_active": true
+    }
+  ],
+  "theatres": [
+    {
+      "id": 1,
+      "name": "Scope Cinemas Multiplex",
+      "location": "Colombo City Centre",
+      "total_seats": 320,
+      "description": "Premium multiplex in Colombo.",
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "name": "PVR Cinemas One Galle Face",
+      "location": "Galle Face, Colombo",
+      "total_seats": 280,
+      "description": "Waterfront cinema experience.",
+      "is_active": true
+    }
+  ],
+  "showtimes": [
+    {
+      "id": 101,
+      "movie_id": 1,
+      "theatre_id": 1,
+      "showtime": "2026-06-15 18:30:00",
+      "available_seats": 120,
+      "ticket_price": "850.00",
+      "language": "English",
+      "format": "IMAX",
+      "is_active": true,
+      "movie": { "id": 1, "title": "Avengers: Endgame" },
+      "theatre": { "id": 1, "name": "Scope Cinemas Multiplex" }
+    },
+    {
+      "id": 102,
+      "movie_id": 2,
+      "theatre_id": 2,
+      "showtime": "2026-06-15 21:00:00",
+      "available_seats": 95,
+      "ticket_price": "750.00",
+      "language": "English",
+      "format": "2D",
+      "is_active": true,
+      "movie": { "id": 2, "title": "Interstellar" },
+      "theatre": { "id": 2, "name": "PVR Cinemas One Galle Face" }
+    }
+  ]
+}

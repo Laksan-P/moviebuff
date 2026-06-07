@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import '../core/theme/app_colors.dart';
 import '../services/booking_service.dart';
 import '../services/auth_service.dart';
-import '../services/local_db_service.dart';
 import '../widgets/premium_screen_stack.dart';
 import 'my_bookings_screen.dart';
 
@@ -13,6 +12,7 @@ class PaymentScreen extends StatefulWidget {
   final String theatreName;
   final String showDate;
   final String showTime;
+  final int showtimeId;
   final int ticketCount;
   final String amount;
   final List<String> selectedSeats;
@@ -23,6 +23,7 @@ class PaymentScreen extends StatefulWidget {
     required this.theatreName,
     required this.showDate,
     required this.showTime,
+    required this.showtimeId,
     required this.ticketCount,
     required this.amount,
     required this.selectedSeats,
@@ -847,18 +848,21 @@ class _PaymentScreenState extends State<PaymentScreen> {
       'seats': widget.selectedSeats.join(', '),
       'amount': widget.amount.toString(),
       'tickets': widget.ticketCount.toString(),
-      'format': 'IMAX',
-      'language': 'English',
-      'status': 'Confirmed',
+      'showtime_id': widget.showtimeId,
+      'payment_method': _paymentMethod.toLowerCase().contains('credit')
+          ? 'credit_card'
+          : 'debit_card',
+      'card_number': _cardNumberController.text.trim(),
     };
 
-    int localId;
     try {
-      localId = await LocalDbService.insertBooking(bookingPayload);
+      await BookingService.saveBooking(
+        Map<String, dynamic>.from(bookingPayload),
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not save booking locally: $e')),
+          SnackBar(content: Text('Could not save booking: $e')),
         );
       }
       return;
@@ -867,12 +871,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Booking saved locally.')),
-    );
-
-    await BookingService.saveBooking(
-      Map<String, dynamic>.from(bookingPayload),
-      clientBookingId: localId.toString(),
+      const SnackBar(content: Text('Booking confirmed via API.')),
     );
 
     if (!mounted) return;

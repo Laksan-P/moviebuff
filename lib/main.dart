@@ -9,20 +9,10 @@ import 'providers/theme_provider.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
-import 'services/movie_service.dart';
-import 'services/showtime_service.dart';
-import 'services/theatre_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Seed local storage on first run (existing behaviour, untouched).
-  await MovieService.initMovies();
-  await TheatreService.initTheatres();
-  // Avoid injecting Sem 1 template showtimes before MovieProvider merges catalogue.
-  await ShowtimeService.initShowtimes(applySem1Templates: false);
-
-  // Create providers, hydrate the ones that need it before runApp.
   final themeProvider = ThemeProvider();
   final authProvider = AuthProvider();
   final connectivityProvider = ConnectivityProvider();
@@ -34,9 +24,10 @@ Future<void> main() async {
     connectivityProvider.init(),
   ]);
 
-  // Kick off the external movie load asynchronously so the UI can paint.
-  // ignore: unawaited_futures
-  movieProvider.load();
+  if (authProvider.isLoggedIn) {
+    // ignore: unawaited_futures
+    movieProvider.load(isOnline: connectivityProvider.isOnline);
+  }
 
   debugPrint(
     '🚀 APP START - loggedIn=${authProvider.isLoggedIn} admin=${authProvider.isAdmin} email=${authProvider.email}',

@@ -10,6 +10,7 @@ import '../widgets/glass_card.dart';
 import 'signup_screen.dart';
 import 'home_screen.dart';
 import '../providers/auth_provider.dart';
+import '../providers/connectivity_provider.dart';
 import '../providers/movie_provider.dart';
 import 'admin/admin_dashboard_screen.dart';
 import '../widgets/app_logo.dart';
@@ -64,7 +65,8 @@ class _LoginScreenState extends State<LoginScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       // ignore: unawaited_futures
-      context.read<MovieProvider>().load(forceRefresh: true);
+      final online = context.read<ConnectivityProvider>().isOnline;
+      context.read<MovieProvider>().load(forceRefresh: true, isOnline: online);
       if (auth.isAdmin) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),

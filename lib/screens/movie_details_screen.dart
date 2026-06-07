@@ -8,6 +8,7 @@ import '../providers/movie_provider.dart';
 import '../services/showtime_service.dart';
 import '../utils/movie_catalog_utils.dart';
 import '../widgets/glass_card.dart';
+import '../widgets/movie_poster.dart';
 import '../widgets/premium_screen_stack.dart';
 
 class MovieDetailsScreen extends StatefulWidget {
@@ -51,6 +52,15 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
     if (prov.awaitingCatalogueUi) {
       _lastScheduledMoviesToken = null;
       return;
+    }
+    final lookup = MovieCatalogUtils.buildPosterLookup(prov.movies);
+    final refreshed = MovieCatalogUtils.normalizeCustomerMovie(
+      widget.movie,
+      posterLookup: lookup,
+    );
+    if (refreshed['image'] != _movie['image'] ||
+        refreshed['posterUrl'] != _movie['posterUrl']) {
+      setState(() => _movie = refreshed);
     }
     _maybeScheduleShowtimes(prov);
   }
@@ -187,10 +197,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
   }
 
   List<Map<String, dynamic>> _getFilteredShowtimes() {
-    final fromPrefs = allShowtimes.where(_matchesShowtimeFilters).toList();
-    if (fromPrefs.isNotEmpty) return fromPrefs;
-    final synthetic = ShowtimeService.buildExternalCatalogShowtimes(_movie);
-    return synthetic.where(_matchesShowtimeFilters).toList();
+    return allShowtimes.where(_matchesShowtimeFilters).toList();
   }
 
   String _getIsoDateFromLabel(String label) {
@@ -308,9 +315,25 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                           alignment: Alignment.center,
                           clipBehavior: Clip.none,
                           children: [
-                            _MovieDetailsPosterCard(
-                              rawMovie: widget.movie,
-                              title: (_movie['title'] ?? 'Movie').toString(),
+                            DecoratedBox(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(24),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.2),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 10),
+                                  ),
+                                ],
+                              ),
+                              child: MoviePoster(
+                                movie: _movie,
+                                title: (_movie['title'] ?? 'Movie').toString(),
+                                width: 260,
+                                height: 380,
+                                decodeWidth: 260,
+                                borderRadius: BorderRadius.circular(24),
+                              ),
                             ),
                             Positioned(
                               left: 0,
@@ -729,6 +752,9 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                                         showDate: t['date'],
                                         theatreName:
                                             t['theatre'] ?? 'Unknown Theatre',
+                                        showtimeId: int.parse(
+                                          t['id'].toString(),
+                                        ),
                                         selectedFormat: t['format'] ?? '2D',
                                         selectedLanguage:
                                             t['language'] ?? 'English',
@@ -931,129 +957,3 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
   }
 }
 
-/// Prefer raw `image`, then `posterUrl` on load failure; then local asset; then placeholder.
-class _MovieDetailsPosterCard extends StatefulWidget {
-  const _MovieDetailsPosterCard({
-    required this.rawMovie,
-    required this.title,
-  });
-
-  final Map<String, dynamic> rawMovie;
-  final String title;
-
-  @override
-  State<_MovieDetailsPosterCard> createState() => _MovieDetailsPosterCardState();
-}
-
-class _MovieDetailsPosterCardState extends State<_MovieDetailsPosterCard> {
-  late final List<String> _networkUrls;
-  int _urlIndex = 0;
-
-  static String? _httpUrl(dynamic v) {
-    final t = v?.toString().trim() ?? '';
-    if (t.isEmpty || t == 'null') return null;
-    if (t.startsWith('http')) return t;
-    return null;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    final img = _httpUrl(widget.rawMovie['image']);
-    final poster = _httpUrl(widget.rawMovie['posterUrl']);
-    _networkUrls = [];
-    if (img != null) _networkUrls.add(img);
-    if (poster != null && poster != img) _networkUrls.add(poster);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    late final Widget child;
-    if (_urlIndex < _networkUrls.length) {
-      final url = _networkUrls[_urlIndex];
-      child = Image.network(
-        url,
-        key: ValueKey<String>(url),
-        width: 260,
-        height: 380,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          MovieCatalogUtils.logPosterLoadFailed(widget.title, error);
-          final next = _urlIndex + 1;
-          if (next < _networkUrls.length) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) setState(() => _urlIndex = next);
-            });
-          }
-          return _posterPlaceholder(context);
-        },
-      );
-    } else {
-      final asset = widget.rawMovie['image']?.toString() ?? '';
-      if (asset.isNotEmpty && !asset.startsWith('http')) {
-        child = Image.asset(
-          asset,
-          width: 260,
-          height: 380,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            MovieCatalogUtils.logPosterLoadFailed(widget.title, error);
-            return _posterPlaceholder(context);
-          },
-        );
-      } else {
-        child = _posterPlaceholder(context);
-      }
-    }
-
-    return Container(
-      width: 260,
-      height: 380,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: child,
-    );
-  }
-
-  Widget _posterPlaceholder(BuildContext context) {
-    return Container(
-      width: 260,
-      height: 380,
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.movie_outlined,
-            size: 56,
-            color: Theme.of(
-              context,
-            ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            widget.title,
-            textAlign: TextAlign.center,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.outfit(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

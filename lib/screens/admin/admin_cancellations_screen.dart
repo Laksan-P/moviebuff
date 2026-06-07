@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
+import '../../services/api_mappers.dart';
 import '../../services/booking_service.dart';
 import '../../widgets/premium_screen_stack.dart';
 
@@ -23,32 +24,50 @@ class _AdminCancellationsScreenState extends State<AdminCancellationsScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    BookingService.refresh.addListener(_onBookingsRefreshSignal);
+    _loadCancellations();
+  }
+
+  void _onBookingsRefreshSignal() {
+    if (!mounted) return;
     _loadCancellations();
   }
 
   Future<void> _loadCancellations() async {
-    final allBookings = await BookingService.getBookings();
-    if (mounted) {
-      setState(() {
-        _pendingRequests = allBookings
-            .where(
-              (b) =>
-                  b['status'].toString().trim().toLowerCase() ==
-                  'cancellation requested',
-            )
-            .toList();
-        _fullHistory = allBookings
-            .where(
-              (b) => b['status'].toString().trim().toLowerCase() == 'cancelled',
-            )
-            .toList();
-        _isLoading = false;
-      });
+    try {
+      final pending = await BookingService.getPendingCancellations();
+      final allBookings = await BookingService.getBookings(admin: true);
+
+      debugPrint(
+        '🛠️ ADMIN CANCELLATIONS - pending API count=${pending.length}',
+      );
+      for (final booking in pending) {
+        ApiMappers.logBookingStatus(booking);
+        debugPrint(
+          '  pending id=${booking['id']} api=${booking['_api_status']}',
+        );
+      }
+
+      if (mounted) {
+        setState(() {
+          _pendingRequests = pending;
+          _fullHistory = allBookings
+              .where(ApiMappers.isCancelledBooking)
+              .toList();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('🛠️ ADMIN CANCELLATIONS - load error: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   @override
   void dispose() {
+    BookingService.refresh.removeListener(_onBookingsRefreshSignal);
     _tabController.dispose();
     super.dispose();
   }
@@ -222,13 +241,16 @@ class _AdminCancellationsScreenState extends State<AdminCancellationsScreen>
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryContainer,
+                      color: const Color(0xFFEA580C).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      'PENDING',
+                      (booking['adminStatus'] ??
+                              'Pending Cancellation Request')
+                          .toString()
+                          .toUpperCase(),
                       style: GoogleFonts.outfit(
-                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                        color: const Color(0xFFEA580C),
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
                       ),

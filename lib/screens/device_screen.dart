@@ -209,9 +209,11 @@ class _DeviceScreenState extends State<DeviceScreen> {
 
   String _deviceNetworkSubtitle(ConnectivityProvider conn) {
     if (conn.isOnline) {
-      return 'Live movie catalogue, SSP login, and booking updates are available.';
+      return 'Laravel API is primary for movies, theatres, showtimes, and bookings.';
     }
-    return 'Showing cached movies, favourites, and local bookings from this device.';
+    return 'Offline: Laravel catalogue falls back to sqflite cache, then '
+        'offline_catalog.json. External movies use sqflite cache, then '
+        'bundled external_movies.json.';
   }
 
   String _sspApiTitle() {
@@ -266,6 +268,29 @@ class _DeviceScreenState extends State<DeviceScreen> {
             child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 96),
           children: [
+            _sectionTitle('Data sources'),
+            _card(
+              icon: Icons.account_tree_outlined,
+              iconColor: Theme.of(context).colorScheme.primary,
+              title: 'Multi-source architecture',
+              subtitle: movieProv.sourceLabel,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Text(
+                  'Laravel API → movies, theatres, showtimes, bookings, CRUD\n'
+                  'External JSON → read-only movie enrichment (merged list)\n'
+                  'Local JSON + sqflite → offline fallback & favorites\n'
+                  'SharedPreferences → auth token, theme & profile',
+                  style: GoogleFonts.outfit(
+                    fontSize: 11,
+                    color: muted,
+                    height: 1.45,
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
             _sectionTitle('Network'),
             _card(
               icon: conn.isOnline ? Icons.wifi : Icons.wifi_off,

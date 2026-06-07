@@ -34,9 +34,9 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
     final theatres = await AdminCatalogService.mergeTheatresForAdmin(
       prov.movies,
     );
-    final showtimes = await ShowtimeService.getAdminMergedShowtimes(
-      prov.movies,
-    );
+    final showtimes = prov.showtimes.isNotEmpty
+        ? prov.showtimes
+        : await ShowtimeService.getAdminMergedShowtimes(prov.movies);
     final sorted = List<Map<String, dynamic>>.from(showtimes.reversed);
     return _AdminShowtimePack(
       movies: movies,
@@ -465,9 +465,19 @@ class _AdminShowtimesScreenState extends State<AdminShowtimesScreen> {
                                   final dateStr =
                                       '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
 
+                                  final selM =
+                                      _movieForTitle(selectedMovie, pack.movies);
+                                  final selT = pack.theatres.firstWhere(
+                                    (t) => t['name'] == selectedTheatre,
+                                    orElse: () => {},
+                                  );
                                   final row = <String, dynamic>{
                                     'movie': selectedMovie,
                                     'theatre': selectedTheatre,
+                                    if (selM?['id'] != null)
+                                      'movie_id': selM!['id'],
+                                    if (selT['id'] != null)
+                                      'theatre_id': selT['id'],
                                     'time': timeController.text.trim(),
                                     'date': dateStr,
                                     'format': selectedFormat,

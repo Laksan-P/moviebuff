@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/theme/app_colors.dart';
+import '../services/api_mappers.dart';
+import '../services/api_service.dart';
 import '../services/booking_service.dart';
 import '../utils/text_safety.dart';
 import '../widgets/premium_screen_stack.dart';
@@ -34,25 +36,57 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
   }
 
   void _processCancellation() async {
-    // Show loading or processing state if needed
-    // For now, just call the service and navigate back
-    await BookingService.requestCancellation(
-      widget.booking['id'],
-      _selectedReason ?? 'Other',
-      _commentController.text,
-    );
+    if (!ApiMappers.canRequestCancellation(widget.booking)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'A cancellation request is already pending for this booking.',
+          ),
+        ),
+      );
+      Navigator.pop(context);
+      return;
+    }
 
-    if (!mounted) return;
+    try {
+      await BookingService.requestCancellation(
+        widget.booking['id'],
+        _selectedReason ?? 'Other',
+        _commentController.text,
+      );
+      await BookingService.getBookings();
+      BookingService.notifyBookingsChanged();
 
-    // Show success feedback and navigate back
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Booking cancelled successfully'),
-        backgroundColor: AppColors.success,
-      ),
-    );
+      if (!mounted) return;
 
-    Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Cancellation request submitted. Awaiting admin review.',
+          ),
+          backgroundColor: AppColors.success,
+        ),
+      );
+
+      Navigator.pop(context, true);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not submit cancellation: $e'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
   }
 
   @override

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../providers/movie_provider.dart';
 import '../../services/admin_catalog_service.dart';
 import '../../services/movie_service.dart';
+import '../../widgets/movie_poster.dart';
 import '../../widgets/premium_screen_stack.dart';
 
 class AdminMoviesScreen extends StatefulWidget {
@@ -193,16 +194,10 @@ class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
                         if (movie == null) {
                           await MovieService.addMovie(movieData);
                         } else {
-                          final src =
-                              movie['_adminSource'] as String? ?? 'seed';
-                          if (src == 'catalogue') {
-                            await MovieService.addMovie(movieData);
-                          } else {
-                            await MovieService.updateMovie(
-                              movie['title']! as String,
-                              movieData,
-                            );
-                          }
+                          await MovieService.updateMovie(
+                            movie['id'] ?? movie['title'],
+                            movieData,
+                          );
                         }
                         if (!context.mounted) return;
                         await context
@@ -527,12 +522,7 @@ class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
 
     if (confirm != true) return;
 
-    final src = movie['_adminSource'] as String? ?? 'seed';
-    if (src == 'catalogue') {
-      await AdminCatalogService.suppressMovie(movie['title'] as String);
-    } else {
-      await MovieService.removeMovie(movie['title'] as String);
-    }
+    await MovieService.removeMovie(movie['id'] ?? movie['title']);
     if (mounted) {
       await context.read<MovieProvider>().refreshAfterAdminEdit();
       setState(() {});
@@ -540,58 +530,13 @@ class _AdminMoviesScreenState extends State<AdminMoviesScreen> {
   }
 
   Widget _thumb(Map<String, dynamic> movie) {
-    final url = (movie['image'] ?? movie['posterUrl'])?.toString() ?? '';
-    if (url.isEmpty) {
-      return Container(
-        width: 50,
-        height: 70,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        ),
-        child: Icon(
-          Icons.movie,
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
-      );
-    }
-    if (url.startsWith('http')) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: Image.network(
-          url,
-          width: 50,
-          height: 70,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(
-            width: 50,
-            height: 70,
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            child: Icon(
-              Icons.broken_image,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ),
-      );
-    }
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
-      child: Image.asset(
-        url,
+      child: MoviePoster(
+        movie: movie,
         width: 50,
         height: 70,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Container(
-          width: 50,
-          height: 70,
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          child: Icon(
-            Icons.movie,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-        ),
+        decodeWidth: 50,
       ),
     );
   }

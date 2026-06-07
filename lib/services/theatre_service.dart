@@ -1,103 +1,59 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../core/constants/app_data.dart';
 
+import 'api_service.dart';
+
+/// Theatres loaded and mutated exclusively through the Laravel API.
 class TheatreService {
-  static const String _theatresKey = 'app_theatres';
-
-  static Future<void> _setString(String key, String value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(key, value);
-  }
-
-  static Future<String?> _getString(String key) async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(key);
-  }
-
-  // Initialize theatres if not present
-  static Future<void> initTheatres() async {
-    final existing = await _getString(_theatresKey);
-    List<Map<String, dynamic>> theatres = [];
-
-    if (existing != null) {
-      final List<dynamic> decoded = jsonDecode(existing);
-      theatres = decoded.map((t) => Map<String, dynamic>.from(t)).toList();
-    }
-
-    // Add any missing theatres from AppData
-    bool updated = false;
-    for (var initialTheatre in AppData.theatres) {
-      if (!theatres.any((t) => t['name'] == initialTheatre['name'])) {
-        theatres.add(initialTheatre);
-        updated = true;
-      }
-    }
-
-    if (updated || existing == null) {
-      await _setString(_theatresKey, jsonEncode(theatres));
-      debugPrint(
-        '🎭 THEATRE SERVICE - Synced with ${updated ? "new " : ""}default theatres',
-      );
-    }
-  }
-
-  // Get all theatres
   static Future<List<Map<String, dynamic>>> getTheatres() async {
-    await initTheatres(); // Ensure we have data
-    final json = await _getString(_theatresKey) ?? '[]';
-    final List<dynamic> decoded = jsonDecode(json);
-    return decoded.map((t) => Map<String, dynamic>.from(t)).toList();
+    final theatres = await ApiService.fetchTheatres();
+    debugPrint('🎭 THEATRE SERVICE - Loaded ${theatres.length} theatres from API');
+    return theatres;
   }
 
-  // Add a theatre (marks as admin-managed local row).
   static Future<void> addTheatre(Map<String, dynamic> theatre) async {
-    final theatres = await getTheatres();
-    theatres.removeWhere(
-      (t) => t['name'] == theatre['name'] && t['_adminLocal'] == true,
-    );
     final row = Map<String, dynamic>.from(theatre);
-    row['_adminLocal'] = true;
-    theatres.add(row);
-    await _setString(_theatresKey, jsonEncode(theatres));
-    debugPrint('🛠️ ADMIN CRUD - Added theatre: ${row['name']}');
+    row.putIfAbsent('total_seats', () => 120);
+    await ApiService.createTheatre(row);
+    debugPrint('🛠️ ADMIN CRUD - Created theatre via API: ${theatre['name']}');
   }
 
-  // Update a theatre
   static Future<void> updateTheatre(
-    int index,
+    dynamic indexOrId,
     Map<String, dynamic> updatedTheatre,
   ) async {
-    final theatres = await getTheatres();
-    if (index >= 0 && index < theatres.length) {
-      final merged = Map<String, dynamic>.from(updatedTheatre);
-      if (theatres[index]['_adminLocal'] == true) {
-        merged['_adminLocal'] = true;
-      }
-      theatres[index] = merged;
-      await _setString(_theatresKey, jsonEncode(theatres));
-      debugPrint('🛠️ ADMIN CRUD - Updated theatre: ${merged['name']}');
-    }
+    final id = _resolveId(indexOrId, updatedTheatre);
+    await ApiService.updateTheatre(id, updatedTheatre);
+    debugPrint(
+      '🛠️ ADMIN CRUD - Updated theatre via API: ${updatedTheatre['name']}',
+    );
   }
 
-  // Remove a theatre by index
   static Future<void> removeTheatre(int index) async {
-    final theatres = await getTheatres();
-    if (index >= 0 && index < theatres.length) {
-      final removed = theatres.removeAt(index);
-      await _setString(_theatresKey, jsonEncode(theatres));
-      debugPrint(
-        '🛠️ ADMIN CRUD - Deleted theatre: ${removed['name']}',
-      );
-    }
+    throw UnsupportedError(
+      'Use removeTheatreById — list index is not stable with API data.',
+    );
   }
 
   static Future<void> removeTheatreByName(String name) async {
-    final theatres = await getTheatres();
-    final index = theatres.indexWhere((t) => t['name'] == name);
-    if (index >= 0) {
-      await removeTheatre(index);
-    }
+    throw UnsupportedError(
+      'Use removeTheatreById — delete theatres by database id.',
+    );
+  }
+
+  static Future<void> removeTheatreById(int id) async {
+    await ApiService.deleteTheatre(id);
+    debugPrint('🛠️ ADMIN CRUD - Deleted theatre via API: $id');
+  }
+
+  static int _resolveId(
+    dynamic indexOrId,
+    Map<String, dynamic>? theatre,
+  ) {
+    final fromTheatre = theatre?['id'];
+    if (fromTheatre != null) return int.parse(fromTheatre.toString());
+    if (indexOrId is int && indexOrId > 0) return indexOrId;
+    final parsed = int.tryParse(indexOrId?.toString() ?? '');
+    if (parsed != null) return parsed;
+    throw ArgumentError('Theatre id is required for API update/delete.');
   }
 }

@@ -69,25 +69,19 @@ class _AdminTheatresScreenState extends State<AdminTheatresScreen> {
                       'name': nameController.text,
                       'location': locationController.text,
                       'description': descriptionController.text,
+                      'total_seats':
+                          int.tryParse(theatre?['total_seats']?.toString() ?? '') ??
+                          120,
                     };
 
                     if (theatre == null) {
                       await TheatreService.addTheatre(newTheatre);
                     } else {
-                      final src = theatre['_adminSource'] as String? ?? 'seed';
-                      if (src == 'catalogue') {
-                        await TheatreService.addTheatre(newTheatre);
-                      } else {
-                        final raw = await TheatreService.getTheatres();
-                        final idx = raw.indexWhere(
-                          (t) => t['name'] == theatre['name'],
-                        );
-                        if (idx >= 0) {
-                          await TheatreService.updateTheatre(idx, newTheatre);
-                        } else {
-                          await TheatreService.addTheatre(newTheatre);
-                        }
-                      }
+                      newTheatre['id'] = theatre['id'];
+                      await TheatreService.updateTheatre(
+                        theatre['id'],
+                        newTheatre,
+                      );
                     }
 
                     if (!context.mounted) return;
@@ -202,11 +196,10 @@ class _AdminTheatresScreenState extends State<AdminTheatresScreen> {
 
     if (confirm != true) return;
 
-    final src = theatre['_adminSource'] as String? ?? 'seed';
-    if (src == 'catalogue') {
-      await AdminCatalogService.suppressTheatre(theatre['name'] as String);
-    } else {
-      await TheatreService.removeTheatreByName(theatre['name'] as String);
+    if (theatre['id'] != null) {
+      await TheatreService.removeTheatreById(
+        int.parse(theatre['id'].toString()),
+      );
     }
     if (mounted) {
       await context.read<MovieProvider>().refreshAfterAdminEdit();

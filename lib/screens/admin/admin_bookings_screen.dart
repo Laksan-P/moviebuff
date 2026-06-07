@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../services/api_mappers.dart';
 import '../../services/booking_service.dart';
 import '../../utils/text_safety.dart';
 import '../../widgets/premium_screen_stack.dart';
@@ -22,7 +23,7 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
   }
 
   Future<void> _loadBookings() async {
-    final bookings = await BookingService.getBookings();
+    final bookings = await BookingService.getBookings(admin: true);
     if (mounted) {
       setState(() {
         _bookings = bookings.reversed.toList();
@@ -63,18 +64,11 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
                 itemBuilder: (context, index) {
                   final booking = _bookings[index];
                   final shortId = TextSafety.safeBookingIdSuffix(booking['id']);
-                  final status = booking['status'] ?? 'Confirmed';
-                  final statusLower = status.toString().toLowerCase();
-                  final bool isCancelled =
-                      statusLower == 'cancelled' ||
-                      statusLower == 'cancellation requested';
-
-                  final chipBg = isCancelled
-                      ? scheme.errorContainer
-                      : scheme.tertiaryContainer;
-                  final chipFg = isCancelled
-                      ? scheme.onErrorContainer
-                      : scheme.onTertiaryContainer;
+                  final apiStatus =
+                      booking['_api_status']?.toString() ?? booking['status']?.toString();
+                  final statusLabel = booking['adminStatus']?.toString() ??
+                      ApiMappers.bookingStatusLabel(apiStatus, admin: true);
+                  final statusColor = ApiMappers.bookingStatusColor(apiStatus);
 
                   return Container(
                     padding: const EdgeInsets.all(16),
@@ -116,17 +110,17 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: chipBg,
+                                color: statusColor.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
-                                status.toString().toUpperCase(),
+                                statusLabel.toUpperCase(),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: GoogleFonts.outfit(
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
-                                  color: chipFg,
+                                  color: statusColor,
                                 ),
                               ),
                             ),

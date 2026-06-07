@@ -85,7 +85,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Future<void> _loadBookings() async {
-    final bookings = await BookingService.getBookings();
+    final bookings = await BookingService.getBookings(admin: true);
 
     int total = 0;
     int confirmed = 0;
@@ -131,7 +131,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     await _loadBookings();
     if (!mounted) return;
     final prov = context.read<MovieProvider>();
-    await prov.load(forceRefresh: true);
+    await prov.load(
+      forceRefresh: true,
+      isOnline: context.read<ConnectivityProvider>().isOnline,
+    );
     if (!mounted) return;
     await _syncCatalogueCounts(prov.movies);
   }

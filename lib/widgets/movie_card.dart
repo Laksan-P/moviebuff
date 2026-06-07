@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../utils/poster_decode.dart';
+import '../utils/movie_catalog_utils.dart';
+import 'movie_poster.dart';
 
 class MovieCard extends StatelessWidget {
   final String title;
@@ -26,7 +27,10 @@ class MovieCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final cacheW = posterDecodePixels(context, cardWidth);
+    final movie = <String, dynamic>{
+      'title': title,
+      if (MovieCatalogUtils.isNetworkPosterUrl(imageUrl)) 'image': imageUrl,
+    };
 
     return Material(
       color: Colors.transparent,
@@ -45,111 +49,77 @@ class MovieCard extends StatelessWidget {
             child: Stack(
               children: [
                 Positioned.fill(
-                  child: Image.network(
-                    imageUrl,
-                    fit: BoxFit.cover,
-                    cacheWidth: cacheW,
-                    gaplessPlayback: true,
-                    loadingBuilder: (context, child, progress) {
-                      if (progress == null) return child;
-                      return ColoredBox(
-                        color: scheme.surfaceContainerHighest,
-                        child: Center(
-                          child: SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: scheme.primary.withValues(alpha: 0.5),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      return ColoredBox(
-                        color: scheme.surfaceContainerHighest,
-                        child: Center(
-                          child: Icon(
-                            Icons.movie_creation_outlined,
-                            size: 48,
-                            color: scheme.outline,
-                          ),
-                        ),
-                      );
-                    },
+                  child: MoviePoster(
+                    movie: movie,
+                    title: title,
+                    decodeWidth: cardWidth,
                   ),
                 ),
                 Positioned(
-                  bottom: 0,
                   left: 0,
                   right: 0,
-                  height: 130,
-                  child: DecoratedBox(
+                  bottom: 0,
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(12, 24, 12, 12),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
                           Colors.transparent,
-                          Colors.black.withValues(alpha: 0.88),
+                          Colors.black.withValues(alpha: 0.85),
                         ],
                       ),
                     ),
-                  ),
-                ),
-                Positioned(
-                  bottom: 14,
-                  left: 14,
-                  right: 14,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: GoogleFonts.outfit(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.2,
-                          height: 1.15,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.outfit(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                          ),
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.star_rounded,
-                            color: Color(0xFFE8C547),
-                            size: 16,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            rating,
-                            style: GoogleFonts.outfit(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              genre,
-                              style: GoogleFonts.outfit(
-                                color: Colors.white.withValues(alpha: 0.75),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                genre,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.outfit(
+                                  color: Colors.white70,
+                                  fontSize: 11,
+                                ),
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.amber.withValues(alpha: 0.9),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                rating,
+                                style: GoogleFonts.outfit(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],

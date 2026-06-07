@@ -50,3 +50,4 @@ flutter:
   assets:
     - assets/images/logo.png
     - assets/data/external_movies.json
+    - assets/data/offline_catalog.json

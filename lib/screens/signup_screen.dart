@@ -8,6 +8,7 @@ import '../widgets/custom_text_field.dart';
 import 'login_screen.dart';
 import 'home_screen.dart';
 import '../providers/auth_provider.dart';
+import '../providers/connectivity_provider.dart';
 import '../providers/movie_provider.dart';
 import '../services/profile_details_service.dart';
 import 'admin/admin_dashboard_screen.dart';
@@ -81,7 +82,8 @@ class _SignupScreenState extends State<SignupScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       // ignore: unawaited_futures
-      context.read<MovieProvider>().load(forceRefresh: true);
+      final online = context.read<ConnectivityProvider>().isOnline;
+      context.read<MovieProvider>().load(forceRefresh: true, isOnline: online);
       if (auth.isAdmin) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
