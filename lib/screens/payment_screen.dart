@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../core/theme/app_colors.dart';
 import '../services/booking_service.dart';
 import '../services/auth_service.dart';
+import '../utils/movie_catalog_utils.dart';
 import '../widgets/premium_screen_stack.dart';
 import 'my_bookings_screen.dart';
 
@@ -13,6 +14,9 @@ class PaymentScreen extends StatefulWidget {
   final String showDate;
   final String showTime;
   final int showtimeId;
+  final String showtimeKey;
+  final bool isExternalJsonBooking;
+  final String? movieId;
   final int ticketCount;
   final String amount;
   final List<String> selectedSeats;
@@ -24,6 +28,9 @@ class PaymentScreen extends StatefulWidget {
     required this.showDate,
     required this.showTime,
     required this.showtimeId,
+    this.showtimeKey = '',
+    this.isExternalJsonBooking = false,
+    this.movieId,
     required this.ticketCount,
     required this.amount,
     required this.selectedSeats,
@@ -847,8 +854,17 @@ class _PaymentScreenState extends State<PaymentScreen> {
       'time': timeStr,
       'seats': widget.selectedSeats.join(', '),
       'amount': widget.amount.toString(),
+      'total_price': widget.amount.toString(),
       'tickets': widget.ticketCount.toString(),
+      'ticket_count': widget.ticketCount.toString(),
       'showtime_id': widget.showtimeId,
+      'showtime_key': widget.showtimeKey,
+      'movie_id': widget.movieId,
+      'movieId': widget.movieId,
+      'is_external_json': widget.isExternalJsonBooking,
+      'booking_source': widget.isExternalJsonBooking
+          ? MovieCatalogUtils.catalogSourceExternalJson
+          : MovieCatalogUtils.catalogSourceLaravelApi,
       'payment_method': _paymentMethod.toLowerCase().contains('credit')
           ? 'credit_card'
           : 'debit_card',
@@ -871,7 +887,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Booking confirmed via API.')),
+      SnackBar(
+        content: Text(
+          widget.isExternalJsonBooking
+              ? 'Offline booking saved to SQLite.'
+              : 'Booking confirmed via API.',
+        ),
+      ),
     );
 
     if (!mounted) return;

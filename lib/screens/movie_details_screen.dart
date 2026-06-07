@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'booking_screen.dart';
 import '../core/theme/app_colors.dart';
 import '../providers/movie_provider.dart';
+import '../services/external_showtime_service.dart';
 import '../services/showtime_service.dart';
 import '../utils/movie_catalog_utils.dart';
 import '../widgets/glass_card.dart';
@@ -94,7 +95,9 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
     setState(() => _isloadingShowtimes = true);
 
     final merged = context.read<MovieProvider>().movies;
-    final showtimes = await ShowtimeService.getCustomerShowtimes(merged);
+    final showtimes = MovieCatalogUtils.isExternalJsonMovie(_movie)
+        ? ExternalShowtimeService.forMovie(_movie)
+        : await ShowtimeService.getCustomerShowtimes(merged);
 
     debugPrint(
       '🎬 MOVIE DETAILS - Total showtimes loaded: ${showtimes.length}',
@@ -744,26 +747,37 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) => BookingScreen(
-                                        movieTitle:
-                                            _movie['title']?.toString() ??
-                                                'Movie',
-                                        showtime: t['time'],
-                                        showDate: t['date'],
-                                        theatreName:
-                                            t['theatre'] ?? 'Unknown Theatre',
-                                        showtimeId: int.parse(
-                                          t['id'].toString(),
-                                        ),
-                                        selectedFormat: t['format'] ?? '2D',
-                                        selectedLanguage:
-                                            t['language'] ?? 'English',
-                                        ticketPrice:
-                                            (t['price'] as num?)?.toDouble() ??
-                                                MovieCatalogUtils.priceFromMovie(
-                                                  _movie,
-                                                ),
-                                      ),
+                                      builder: (_) {
+                                        final isExternal =
+                                            MovieCatalogUtils
+                                                .isExternalJsonShowtime(t) ||
+                                            MovieCatalogUtils
+                                                .isExternalJsonMovie(_movie);
+                                        final rawId = t['id']?.toString() ?? '0';
+                                        final parsedId = int.tryParse(rawId);
+                                        return BookingScreen(
+                                          movieTitle:
+                                              _movie['title']?.toString() ??
+                                                  'Movie',
+                                          showtime: t['time'],
+                                          showDate: t['date'],
+                                          theatreName:
+                                              t['theatre'] ?? 'Unknown Theatre',
+                                          showtimeId: parsedId ?? 0,
+                                          showtimeKey: rawId,
+                                          isExternalJsonBooking: isExternal,
+                                          movieId: t['movie_id']?.toString() ??
+                                              _movie['movieId']?.toString(),
+                                          selectedFormat: t['format'] ?? '2D',
+                                          selectedLanguage:
+                                              t['language'] ?? 'English',
+                                          ticketPrice:
+                                              (t['price'] as num?)
+                                                      ?.toDouble() ??
+                                                  MovieCatalogUtils
+                                                      .priceFromMovie(_movie),
+                                        );
+                                      },
                                     ),
                                   );
                                 },

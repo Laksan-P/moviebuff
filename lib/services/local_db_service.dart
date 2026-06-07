@@ -4,13 +4,21 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 
-/// sqflite-backed local storage. Three responsibilities:
-///   1. `favorites` table — user starred movies (read/write)
-///   2. `movie_cache` table — last successful external JSON snapshot
-///   3. `bookings` table — movie ticket bookings (MAD II local DB scenario)
+/// sqflite-backed local storage.
+///
+/// Laravel remains authoritative for API bookings, auth, admin CRUD, payments,
+/// and cancellation workflows. SQLite bookings exist for:
+///   • External JSON movies (offline booking demonstration)
+///   • MAD II local persistence requirements
+///
+/// SQLite booking CRUD (report support):
+///   • CREATE — [insertBooking]
+///   • READ   — [getBookingsByUser], [getBookingById], [countAllBookings]
+///   • UPDATE — [updateBookingStatus] (e.g. Confirmed → Cancelled)
+///   • DELETE — [deleteBooking]
 class LocalDbService {
   static const _dbName = 'moviebuff.db';
-  static const _dbVersion = 2;
+  static const _dbVersion = 3;
 
   static const _favTable = 'favorites';
   static const _cacheTable = 'movie_cache';
@@ -43,17 +51,40 @@ class LocalDbService {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         server_id TEXT,
         user_email TEXT NOT NULL,
+        movie_id TEXT,
         movie_title TEXT NOT NULL,
         theatre TEXT NOT NULL,
         date TEXT NOT NULL,
         time TEXT NOT NULL,
         seats TEXT NOT NULL,
+        ticket_count INTEGER NOT NULL DEFAULT 1,
         amount REAL NOT NULL,
         status TEXT NOT NULL,
         created_at TEXT NOT NULL,
-        synced INTEGER NOT NULL DEFAULT 0
+        synced INTEGER NOT NULL DEFAULT 0,
+        booking_source TEXT NOT NULL DEFAULT 'sqlite'
       );
     ''');
+  }
+
+  static Future<void> _upgradeBookingsToV3(Database db) async {
+    final columns = await db.rawQuery('PRAGMA table_info($_bookingsTable)');
+    final names = columns.map((c) => c['name']?.toString()).toSet();
+    if (!names.contains('movie_id')) {
+      await db.execute(
+        'ALTER TABLE $_bookingsTable ADD COLUMN movie_id TEXT',
+      );
+    }
+    if (!names.contains('ticket_count')) {
+      await db.execute(
+        'ALTER TABLE $_bookingsTable ADD COLUMN ticket_count INTEGER NOT NULL DEFAULT 1',
+      );
+    }
+    if (!names.contains('booking_source')) {
+      await db.execute(
+        "ALTER TABLE $_bookingsTable ADD COLUMN booking_source TEXT NOT NULL DEFAULT 'sqlite'",
+      );
+    }
   }
 
   static Future<Database> _database() async {
@@ -74,6 +105,9 @@ class LocalDbService {
         debugPrint('🗄️ SQFLITE - onUpgrade $oldVersion → $newVersion');
         if (oldVersion < 2) {
           await _createBookingsTable(db);
+        }
+        if (oldVersion < 3) {
+          await _upgradeBookingsToV3(db);
         }
       },
     );
@@ -252,55 +286,130 @@ class LocalDbService {
     return seats.split(',').length.toString();
   }
 
+  static String _normalizeLocalStatus(String? raw) {
+    final s = raw?.toLowerCase().trim() ?? '';
+    if (s == 'cancelled') return 'offline_cancelled';
+    return 'offline_confirmed';
+  }
+
   /// Maps a DB row to the shape expected by My Bookings / cancel UI.
   static Map<String, dynamic> _bookingRowToUiMap(Map<String, Object?> row) {
     final created = row['created_at'] as String? ?? '';
     final synced = (row['synced'] as int? ?? 0) == 1;
+    final statusLabel = row['status']?.toString() ?? 'Confirmed';
+    final apiStatus = _normalizeLocalStatus(statusLabel);
+    final tickets = row['ticket_count']?.toString() ??
+        _ticketsFromSeats(row['seats'] as String?);
     return {
       'id': row['id'].toString(),
       'server_id': row['server_id'],
+      'movie_id': row['movie_id']?.toString(),
+      'movieId': row['movie_id']?.toString(),
       'movie': row['movie_title']?.toString() ?? '',
       'theatre': row['theatre']?.toString() ?? '',
       'date': row['date']?.toString() ?? '',
       'time': row['time']?.toString() ?? '',
+      'showtime': '${row['date']} ${row['time']}',
       'seats': row['seats']?.toString() ?? '',
       'amount': row['amount']?.toString() ?? '0',
-      'tickets': _ticketsFromSeats(row['seats'] as String?),
-      'status': row['status']?.toString() ?? 'Unknown',
+      'total_price': row['amount']?.toString() ?? '0',
+      'tickets': tickets,
+      'ticket_count': tickets,
+      'status': statusLabel,
+      '_api_status': apiStatus,
       'bookingDate': _formatBookingDateFromIso(created),
+      'booking_date': created,
       'synced': synced,
+      'bookingSource': 'offline',
+      'sourceBadge': 'Offline Booking',
       'email': row['user_email']?.toString() ?? '',
-      'format': 'IMAX',
+      'format': '2D',
       'language': 'English',
       'name': '',
+      'is_local_booking': true,
     };
   }
 
-  /// Inserts a booking. [booking] uses the same keys as [BookingService.saveBooking]
-  /// input (`email`, `movie`, `theatre`, `date`, `time`, `seats`, `amount`, …).
+  /// CREATE — inserts an offline/external JSON booking row.
   static Future<int> insertBooking(Map<String, dynamic> booking) async {
     try {
       final db = await _database();
       final createdAt =
           booking['created_at']?.toString() ?? DateTime.now().toIso8601String();
+      final seats = booking['seats']?.toString() ?? '';
+      final ticketCount = int.tryParse(booking['tickets']?.toString() ?? '') ??
+          int.tryParse(booking['ticket_count']?.toString() ?? '') ??
+          seats.split(',').where((s) => s.trim().isNotEmpty).length;
       final rowId = await db.insert(_bookingsTable, {
         'server_id': booking['server_id']?.toString(),
         'user_email': booking['email']?.toString() ?? '',
+        'movie_id': booking['movie_id']?.toString() ??
+            booking['movieId']?.toString(),
         'movie_title': booking['movie']?.toString() ?? '',
         'theatre': booking['theatre']?.toString() ?? '',
         'date': booking['date']?.toString() ?? '',
         'time': booking['time']?.toString() ?? '',
-        'seats': booking['seats']?.toString() ?? '',
-        'amount': _parseAmount(booking['amount']),
+        'seats': seats,
+        'ticket_count': ticketCount < 1 ? 1 : ticketCount,
+        'amount': _parseAmount(booking['amount'] ?? booking['total_price']),
         'status': booking['status']?.toString() ?? 'Confirmed',
         'created_at': createdAt,
         'synced': 0,
+        'booking_source': booking['booking_source']?.toString() ?? 'sqlite',
       });
-      debugPrint('✅ SQFLITE WRITE SUCCESS: booking inserted with id $rowId');
+      debugPrint('✅ SQFLITE CREATE: booking inserted with id $rowId');
       return rowId;
     } catch (e, st) {
       debugPrint('❌ SQFLITE ERROR: insertBooking — $e\n$st');
       rethrow;
+    }
+  }
+
+  static Future<int> countAllBookings() async {
+    try {
+      final db = await _database();
+      final r = await db.rawQuery('SELECT COUNT(*) AS c FROM $_bookingsTable');
+      return Sqflite.firstIntValue(r) ?? 0;
+    } catch (e) {
+      debugPrint('❌ SQFLITE ERROR: countAllBookings — $e');
+      return 0;
+    }
+  }
+
+  static Future<int> countCachedMovieRows() async {
+    try {
+      final db = await _database();
+      final rows = await db.query(_cacheTable);
+      var total = 0;
+      for (final row in rows) {
+        final raw = row['payload']?.toString() ?? '[]';
+        try {
+          final decoded = jsonDecode(raw);
+          if (decoded is List) total += decoded.length;
+        } catch (_) {}
+      }
+      return total;
+    } catch (e) {
+      debugPrint('❌ SQFLITE ERROR: countCachedMovieRows — $e');
+      return 0;
+    }
+  }
+
+  /// READ — single booking by local row id.
+  static Future<Map<String, dynamic>?> getBookingById(int id) async {
+    try {
+      final db = await _database();
+      final rows = await db.query(
+        _bookingsTable,
+        where: 'id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      if (rows.isEmpty) return null;
+      return _bookingRowToUiMap(rows.first);
+    } catch (e, st) {
+      debugPrint('❌ SQFLITE ERROR: getBookingById — $e\n$st');
+      return null;
     }
   }
 
@@ -342,6 +451,7 @@ class LocalDbService {
     }
   }
 
+  /// UPDATE — local booking status (e.g. Confirmed → Cancelled).
   static Future<void> updateBookingStatus(int id, String status) async {
     try {
       final db = await _database();
@@ -364,6 +474,7 @@ class LocalDbService {
     }
   }
 
+  /// DELETE — removes a local SQLite booking row.
   static Future<void> deleteBooking(int id) async {
     try {
       final db = await _database();

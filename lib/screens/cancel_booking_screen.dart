@@ -54,6 +54,7 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
         widget.booking['id'],
         _selectedReason ?? 'Other',
         _commentController.text,
+        booking: widget.booking,
       );
       await BookingService.getBookings();
       BookingService.notifyBookingsChanged();

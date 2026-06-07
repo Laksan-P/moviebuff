@@ -9,6 +9,7 @@ import 'admin_showtimes_screen.dart';
 import 'admin_bookings_screen.dart';
 import 'admin_theatres_screen.dart';
 import 'admin_cancellations_screen.dart';
+import '../../services/api_mappers.dart';
 import '../../services/auth_service.dart';
 import '../../services/booking_service.dart';
 import '../../providers/connectivity_provider.dart';
@@ -112,7 +113,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
     if (mounted) {
       setState(() {
-        _bookings = bookings.reversed.toList();
+        _bookings = bookings;
+        for (final booking in bookings.take(5)) {
+          final customerName = ApiMappers.bookingCustomerName(booking);
+          final customerEmail = ApiMappers.bookingCustomerEmail(booking);
+          debugPrint(
+            'RECENT BOOKING #${booking['id']} '
+            'customer=$customerName '
+            'email=$customerEmail',
+          );
+        }
         _totalBookings = total;
         _confirmedBookings = confirmed;
         _totalRevenue = revenue;
@@ -788,8 +798,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 // Data Rows
                 ..._bookings.take(5).map((booking) {
                   final id = TextSafety.safeBookingIdSuffix(booking['id']);
-                  final name = (booking['name'] ?? 'User').toString();
-                  final email = (booking['email'] ?? 'Unknown').toString();
+                  final name = ApiMappers.bookingCustomerName(booking);
+                  final email = ApiMappers.bookingCustomerEmail(booking);
                   final movie = (booking['movie'] ?? 'Unknown').toString();
                   final time = (booking['time'] ?? 'N/A').toString();
                   final theatre = (booking['theatre'] ?? 'N/A').toString();
@@ -827,7 +837,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                 ),
                               ),
                               Text(
-                                email,
+                                email.isEmpty ? '—' : email,
                                 style: GoogleFonts.outfit(
                                   fontSize: 11,
                                   color: Theme.of(context).colorScheme.onSurface

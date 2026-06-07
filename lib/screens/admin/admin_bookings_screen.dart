@@ -63,6 +63,8 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
                 separatorBuilder: (_, __) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
                   final booking = _bookings[index];
+                  final customerName = ApiMappers.bookingCustomerName(booking);
+                  final customerEmail = ApiMappers.bookingCustomerEmail(booking);
                   final shortId = TextSafety.safeBookingIdSuffix(booking['id']);
                   final apiStatus =
                       booking['_api_status']?.toString() ?? booking['status']?.toString();
@@ -129,7 +131,7 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
                         const SizedBox(height: 12),
                         _buildInfoRow(
                           'Customer',
-                          '${booking['name'] ?? 'User'} (${booking['email'] ?? 'Unknown'})',
+                          '$customerName (${customerEmail.isEmpty ? 'Unknown' : customerEmail})',
                         ),
                         _buildInfoRow('Movie', '${booking['movie'] ?? 'N/A'}'),
                         _buildInfoRow(

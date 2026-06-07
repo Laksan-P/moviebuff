@@ -41,14 +41,22 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     try {
       final bookings = await BookingService.getBookings();
       if (mounted) {
-        debugPrint('📑 MY BOOKINGS - Loaded ${bookings.length} from API');
+        final apiCount =
+            bookings.where((b) => !BookingService.isLocalBooking(b)).length;
+        final offlineCount =
+            bookings.where(BookingService.isLocalBooking).length;
+        debugPrint(
+          '📑 MY BOOKINGS - total=${bookings.length} '
+          'api=$apiCount offline=$offlineCount',
+        );
         for (final b in bookings) {
           ApiMappers.logBookingStatus(b);
           debugPrint(
-            '  - ${b['movie']} (ID: ${b['id']}, '
-            'api=${b['_api_status']}, label=${b['status']})',
+            '  - ${b['sourceBadge']} ${b['movie']} (ID: ${b['id']}, '
+            'status=${b['_api_status']})',
           );
         }
+        debugPrint('📑 MY BOOKINGS UI - assigning ${bookings.length} to state');
         setState(() => _bookings = bookings);
       }
     } catch (e) {
@@ -73,6 +81,19 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
         _bookings.where(ApiMappers.isActiveBooking).toList();
     final cancelledBookings =
         _bookings.where(ApiMappers.isCancelledBooking).toList();
+
+    debugPrint(
+      '📑 MY BOOKINGS UI - state=${_bookings.length} '
+      'active=${activeBookings.length} cancelled=${cancelledBookings.length}',
+    );
+    for (final b in _bookings) {
+      final inActive = ApiMappers.isActiveBooking(b);
+      final inCancelled = ApiMappers.isCancelledBooking(b);
+      debugPrint(
+        '  tab-check id=${b['id']} offline=${BookingService.isLocalBooking(b)} '
+        'status=${b['_api_status']} → active=$inActive cancelled=$inCancelled',
+      );
+    }
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -206,9 +227,14 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     final badgeLabel = ApiMappers.bookingBadgeLabel(booking);
     final statusColor = ApiMappers.bookingStatusColorForKey(statusKey);
     final statusSubtitle = ApiMappers.bookingStatusSubtitle(booking);
-    final bool isCancelled = statusKey == 'cancelled';
+    final bool isCancelled = ApiMappers.isCancelledBooking(booking);
     final bool isCancellationPending = statusKey == 'cancellation_requested';
-    final bool canCancel = ApiMappers.canRequestCancellation(booking);
+    final bool isLocal = BookingService.isLocalBooking(booking);
+    final bool canCancel =
+        isLocal ? !isCancelled : ApiMappers.canRequestCancellation(booking);
+    final sourceBadge =
+        booking['sourceBadge']?.toString() ??
+        (isLocal ? 'Offline Booking' : 'API Booking');
     final scheme = Theme.of(context).colorScheme;
 
     return Container(
@@ -228,16 +254,41 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            booking['movie'] ?? 'Unknown Movie',
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.outfit(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              height: 1.15,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  booking['movie'] ?? 'Unknown Movie',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.outfit(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    height: 1.15,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: isLocal
+                      ? scheme.tertiary.withValues(alpha: 0.14)
+                      : scheme.primary.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  sourceBadge,
+                  style: GoogleFonts.outfit(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: isLocal ? scheme.tertiary : scheme.primary,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           _buildInfoRow('Booking ID:', booking['id']?.toString() ?? 'N/A'),
@@ -247,10 +298,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
           _buildInfoRow('Seats:', booking['seats'] ?? 'N/A'),
           _buildInfoRow('Tickets:', booking['tickets'] ?? '1'),
           _buildInfoRow('Booking Date:', booking['bookingDate'] ?? 'N/A'),
-          _buildInfoRow(
-            'Storage:',
-            booking['synced'] == true ? 'Cloud Saved' : 'Saved Locally',
-          ),
+          _buildInfoRow('Source:', sourceBadge),
           const SizedBox(height: 20),
           // Total Amount Gray Box
           Container(
@@ -341,11 +389,21 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
               )
             else if (canCancel)
               CustomButton(
-                text: 'Cancel Booking',
+                text: isLocal ? 'Cancel Offline Booking' : 'Cancel Booking',
                 onPressed: () => _confirmCancel(booking),
                 color: Theme.of(context).colorScheme.errorContainer,
                 textColor: Theme.of(context).colorScheme.onErrorContainer,
               ),
+            if (isLocal) ...[
+              const SizedBox(height: 12),
+              CustomButton(
+                text: 'Delete Offline Booking',
+                onPressed: () => _confirmDeleteLocal(booking),
+                isOutlined: true,
+                outlineColor: scheme.error,
+                textColor: scheme.error,
+              ),
+            ],
           ],
         ],
       ),
@@ -353,6 +411,10 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
   }
 
   void _showBookingDetails(Map<String, dynamic> booking) {
+    final isLocal = BookingService.isLocalBooking(booking);
+    final sourceBadge =
+        booking['sourceBadge']?.toString() ??
+        (isLocal ? 'Offline Booking' : 'API Booking');
     final maxH = MediaQuery.sizeOf(context).height * 0.85;
     showDialog(
       context: context,
@@ -411,12 +473,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                         'Status',
                         ApiMappers.bookingBadgeLabel(booking),
                       ),
-                      _buildDetailItem(
-                        'Storage',
-                        booking['synced'] == true
-                            ? 'Cloud Saved'
-                            : 'Saved Locally',
-                      ),
+                      _buildDetailItem('Source', sourceBadge),
                       const SizedBox(height: 16),
                     ],
                   ),
@@ -494,6 +551,11 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
   }
 
   void _confirmCancel(Map<String, dynamic> booking) {
+    if (BookingService.isLocalBooking(booking)) {
+      _confirmLocalCancel(booking);
+      return;
+    }
+
     if (!ApiMappers.canRequestCancellation(booking)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -511,6 +573,71 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     ).then((submitted) {
       if (submitted == true) reloadBookings();
     });
+  }
+
+  Future<void> _confirmLocalCancel(Map<String, dynamic> booking) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cancel offline booking?'),
+        content: const Text(
+          'This updates the SQLite booking status to Cancelled.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Keep'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Cancel booking'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    await BookingService.requestCancellation(
+      booking['id'].toString(),
+      'Cancelled by user',
+      '',
+      booking: booking,
+    );
+    await reloadBookings();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Offline booking cancelled in SQLite.')),
+    );
+  }
+
+  Future<void> _confirmDeleteLocal(Map<String, dynamic> booking) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete offline booking?'),
+        content: const Text(
+          'This permanently removes the booking from SQLite.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Keep'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    await BookingService.deleteLocalBooking(booking['id'].toString());
+    await reloadBookings();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Offline booking deleted from SQLite.')),
+    );
   }
 
   Widget _buildInfoRow(String label, String value) {

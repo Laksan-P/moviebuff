@@ -772,7 +772,22 @@ class ApiService {
       tag: 'API ADMIN BOOKINGS',
       parser: (decoded) =>
           _extractList(decoded, dataKey: 'bookings')
-              .map(ApiMappers.bookingFromApi)
+              .map((raw) {
+                final row = Map<String, dynamic>.from(raw as Map);
+                debugPrint('BOOKING DATA: $row');
+                final user = row['user'];
+                if (user is Map) {
+                  debugPrint(
+                    '  user.name=${user['name']} user.email=${user['email']}',
+                  );
+                } else {
+                  debugPrint(
+                    '  customer_name=${row['customer_name']} '
+                    'customer_email=${row['customer_email']}',
+                  );
+                }
+                return ApiMappers.bookingFromApi(row);
+              })
               .toList(),
     );
     return _require(result, 'load admin bookings');

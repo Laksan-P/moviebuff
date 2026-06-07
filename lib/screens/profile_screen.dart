@@ -33,6 +33,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   String? _photoPath;
   ProfileDetails _details = const ProfileDetails();
   int _bookingCount = 0;
+  int _localSqliteBookingCount = 0;
   AuthProvider? _authForListener;
   MovieProvider? _movieProvForListener;
   VoidCallback? _bookingRefreshListener;
@@ -123,13 +124,18 @@ class _ProfileScreenState extends State<ProfileScreen>
     final path = await ProfilePhotoService.getValidPath(auth.email);
 
     var bookings = 0;
+    var localSqlite = 0;
     if (mail.isNotEmpty) {
       try {
-        debugPrint('👤 PROFILE BOOKING COUNT SOURCE: Laravel API');
-        final rows = await BookingService.getBookings(userEmail: mail);
-        bookings = rows.length;
+        localSqlite = await BookingService.countLocalBookings(userEmail: mail);
+        bookings = await BookingService.countAllBookings(userEmail: mail);
+        debugPrint(
+          '👤 PROFILE BOOKING COUNT: total=$bookings '
+          '(sqlite=$localSqlite + api)',
+        );
       } catch (_) {
         bookings = 0;
+        localSqlite = 0;
       }
     }
 
@@ -142,6 +148,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       setState(() {
         _details = details;
         _bookingCount = bookings;
+        _localSqliteBookingCount = localSqlite;
         _photoPath = mail.isEmpty ? null : path;
       });
     }
@@ -733,8 +740,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                           ),
                           _activityLine(
                             Icons.confirmation_number_outlined,
-                            'Local bookings',
-                            _localBookingsLabel(_bookingCount),
+                            'Local bookings (SQLite)',
+                            _localBookingsLabel(_localSqliteBookingCount),
+                          ),
+                          _activityLine(
+                            Icons.cloud_done_outlined,
+                            'Visible bookings (API + offline)',
+                            '$_bookingCount in My Bookings',
                           ),
                           _activityLine(
                             Icons.theaters_outlined,

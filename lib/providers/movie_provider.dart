@@ -80,7 +80,11 @@ class MovieProvider extends ChangeNotifier {
 
       _movies = MovieCatalogUtils.mergeCustomerMovieLists(
         externalCatalogue,
-        core.movies,
+        core.movies.map((m) {
+          final row = Map<String, dynamic>.from(m);
+          MovieCatalogUtils.tagLaravelMovie(row);
+          return row;
+        }).toList(),
         posterLookup: posterLookup,
       );
 

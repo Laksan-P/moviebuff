@@ -11,12 +11,19 @@ class MovieCatalogUtils {
   static const String defaultExternalTheatre =
       'Scope Cinemas Colombo City Centre';
 
+  /// Standard slots for external JSON / offline generated showtimes.
   static const List<String> defaultExternalShowtimes = [
-    '10:30 AM',
-    '01:30 PM',
-    '06:30 PM',
-    '09:00 PM',
+    '10:00 AM',
+    '01:00 PM',
+    '04:00 PM',
+    '07:00 PM',
   ];
+
+  static const String catalogSourceExternalJson = 'external_json';
+  static const String catalogSourceLaravelApi = 'laravel_api';
+
+  static const String bookingSourceApi = 'api';
+  static const String bookingSourceOffline = 'offline';
 
   static const double defaultTicketPrice = 750.0;
 
@@ -119,10 +126,14 @@ class MovieCatalogUtils {
 
     final extNorm = externalPrimary
         .map(
-          (m) => normalizeCustomerMovie(
-            Map<String, dynamic>.from(m),
-            posterLookup: lookup,
-          ),
+          (m) {
+            final row = normalizeCustomerMovie(
+              Map<String, dynamic>.from(m),
+              posterLookup: lookup,
+            );
+            tagExternalMovie(row);
+            return row;
+          },
         )
         .toList();
     final titles = extNorm
@@ -132,12 +143,12 @@ class MovieCatalogUtils {
     for (final m in localFallback) {
       final t = (m['title']?.toString() ?? '').toLowerCase();
       if (t.isEmpty || titles.contains(t)) continue;
-      out.add(
-        normalizeCustomerMovie(
-          Map<String, dynamic>.from(m),
-          posterLookup: lookup,
-        ),
+      final row = normalizeCustomerMovie(
+        Map<String, dynamic>.from(m),
+        posterLookup: lookup,
       );
+      tagLaravelMovie(row);
+      out.add(row);
       titles.add(t);
     }
     return out;
@@ -170,6 +181,33 @@ class MovieCatalogUtils {
       final url = effectivePosterUrl(m);
       debugPrint('MOVIE POSTER SOURCE:\n$title\n${url ?? '(placeholder)'}');
     }
+  }
+
+  static String externalMovieId(String title) {
+    final slug = title
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+        .replaceAll(RegExp(r'^-|-$'), '');
+    return 'ext-${slug.isEmpty ? 'movie' : slug}';
+  }
+
+  static void tagExternalMovie(Map<String, dynamic> movie) {
+    movie['catalogSource'] = catalogSourceExternalJson;
+    movie['movieId'] ??=
+        externalMovieId(movie['title']?.toString() ?? 'movie');
+  }
+
+  static void tagLaravelMovie(Map<String, dynamic> movie) {
+    movie['catalogSource'] = catalogSourceLaravelApi;
+  }
+
+  static bool isExternalJsonMovie(Map<String, dynamic> movie) {
+    return movie['catalogSource']?.toString() == catalogSourceExternalJson;
+  }
+
+  static bool isExternalJsonShowtime(Map<String, dynamic> showtime) {
+    return showtime['source']?.toString() == catalogSourceExternalJson ||
+        showtime['id']?.toString().startsWith('ext-') == true;
   }
 
   /// Loose match for linking external JSON theatre names to AppData theatres.

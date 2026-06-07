@@ -206,8 +206,7 @@ class _AdminCancellationsScreenState extends State<AdminCancellationsScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          (booking['name'] ?? 'User')
-                              .toString()
+                          ApiMappers.bookingCustomerName(booking)
                               .toUpperCase(),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -218,8 +217,9 @@ class _AdminCancellationsScreenState extends State<AdminCancellationsScreen>
                           ),
                         ),
                         Text(
-                          (booking['email'] ?? 'unknown@mail.com')
-                              .toString()
+                          (ApiMappers.bookingCustomerEmail(booking).isEmpty
+                                  ? 'unknown@mail.com'
+                                  : ApiMappers.bookingCustomerEmail(booking))
                               .toUpperCase(),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -353,8 +353,7 @@ class _AdminCancellationsScreenState extends State<AdminCancellationsScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          (booking['name'] ?? 'User')
-                              .toString()
+                          ApiMappers.bookingCustomerName(booking)
                               .toUpperCase(),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -365,8 +364,9 @@ class _AdminCancellationsScreenState extends State<AdminCancellationsScreen>
                           ),
                         ),
                         Text(
-                          (booking['email'] ?? 'unknown@mail.com')
-                              .toString()
+                          (ApiMappers.bookingCustomerEmail(booking).isEmpty
+                                  ? 'unknown@mail.com'
+                                  : ApiMappers.bookingCustomerEmail(booking))
                               .toUpperCase(),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,

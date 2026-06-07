@@ -128,6 +128,32 @@ class ApiMappers {
     };
   }
 
+  static String bookingCustomerName(Map<String, dynamic> booking) {
+    final user = booking['user'];
+    if (user is Map) {
+      final name = user['name']?.toString().trim();
+      if (name != null && name.isNotEmpty) return name;
+    }
+    for (final key in ['customer_name', 'name']) {
+      final value = booking[key]?.toString().trim();
+      if (value != null && value.isNotEmpty) return value;
+    }
+    return 'Unknown Customer';
+  }
+
+  static String bookingCustomerEmail(Map<String, dynamic> booking) {
+    final user = booking['user'];
+    if (user is Map) {
+      final email = user['email']?.toString().trim();
+      if (email != null && email.isNotEmpty) return email;
+    }
+    for (final key in ['customer_email', 'email']) {
+      final value = booking[key]?.toString().trim();
+      if (value != null && value.isNotEmpty) return value;
+    }
+    return '';
+  }
+
   static Map<String, dynamic> bookingFromApi(Map<String, dynamic> raw) {
     final showtime = raw['showtime'] is Map
         ? showtimeFromApi(Map<String, dynamic>.from(raw['showtime'] as Map))
@@ -138,17 +164,32 @@ class ApiMappers {
     final cancellation = raw['cancellation'] is Map
         ? Map<String, dynamic>.from(raw['cancellation'] as Map)
         : null;
+    final customerName = user?['name']?.toString() ??
+        raw['customer_name']?.toString() ??
+        raw['name']?.toString() ??
+        '';
+    final customerEmail = user?['email']?.toString() ??
+        raw['customer_email']?.toString() ??
+        raw['email']?.toString() ??
+        '';
 
     return {
       'id': raw['id']?.toString(),
       'showtime_id': raw['showtime_id'],
-      'name': user?['name']?.toString() ?? raw['name']?.toString() ?? '',
-      'email': user?['email']?.toString() ?? raw['email']?.toString() ?? '',
+      'name': customerName,
+      'email': customerEmail,
+      'customer_name': customerName,
+      'customer_email': customerEmail,
+      if (user != null) 'user': user,
       'movie': showtime?['movie']?.toString() ?? raw['movie']?.toString() ?? '',
       'theatre':
           showtime?['theatre']?.toString() ?? raw['theatre']?.toString() ?? '',
       'date': showtime?['date']?.toString() ?? raw['date']?.toString() ?? '',
       'time': showtime?['time']?.toString() ?? raw['time']?.toString() ?? '',
+      'showtime': showtime?['showtime_iso']?.toString() ??
+          (showtime != null
+              ? '${showtime['date']} ${showtime['time']}'.trim()
+              : raw['showtime']?.toString() ?? ''),
       'seats': raw['seats']?.toString() ?? '',
       'amount': (raw['total_price'] ?? raw['amount'])?.toString() ?? '0',
       'tickets':
@@ -218,10 +259,12 @@ class ApiMappers {
   static String bookingBadgeLabel(Map<String, dynamic> booking) {
     switch (effectiveBookingStatusKey(booking)) {
       case 'confirmed':
+      case 'offline_confirmed':
         return 'CONFIRMED';
       case 'cancellation_requested':
         return 'CANCELLATION PENDING';
       case 'cancelled':
+      case 'offline_cancelled':
         return 'CANCELLED';
       case 'rejected':
         return 'REJECTED';
@@ -249,15 +292,22 @@ class ApiMappers {
     final key = effectiveBookingStatusKey(booking);
     return key == 'confirmed' ||
         key == 'cancellation_requested' ||
+        key == 'offline_confirmed' ||
         key == 'pending' ||
         key == 'rejected';
   }
 
   static bool isCancelledBooking(Map<String, dynamic> booking) {
-    return effectiveBookingStatusKey(booking) == 'cancelled';
+    final key = effectiveBookingStatusKey(booking);
+    return key == 'cancelled' || key == 'offline_cancelled';
   }
 
+  /// API bookings only — offline bookings use local cancel/delete.
   static bool canRequestCancellation(Map<String, dynamic> booking) {
+    if (booking['is_local_booking'] == true ||
+        booking['bookingSource']?.toString() == 'offline') {
+      return false;
+    }
     final key = effectiveBookingStatusKey(booking);
     return key == 'confirmed' || key == 'rejected';
   }
@@ -271,10 +321,12 @@ class ApiMappers {
       case 'pending':
         return const Color(0xFFD97706);
       case 'confirmed':
+      case 'offline_confirmed':
         return const Color(0xFF15803D);
       case 'cancellation_requested':
         return const Color(0xFFEA580C);
       case 'cancelled':
+      case 'offline_cancelled':
         return const Color(0xFFB91C1C);
       case 'rejected':
         return const Color(0xFF64748B);

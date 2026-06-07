@@ -12,8 +12,13 @@ class BookingScreen extends StatefulWidget {
   final String theatreName;
   final String selectedFormat;
   final String selectedLanguage;
-  /// Laravel showtime id used for seat availability and booking creation.
+  /// Laravel showtime id (0 for external JSON / SQLite bookings).
   final int showtimeId;
+  /// External JSON showtime key (e.g. ext-inception-2026-06-08-0).
+  final String showtimeKey;
+  /// True when booking will be saved to SQLite instead of Laravel API.
+  final bool isExternalJsonBooking;
+  final String? movieId;
   /// Per-seat price from API showtime (defaults to 750).
   final double ticketPrice;
 
@@ -24,6 +29,9 @@ class BookingScreen extends StatefulWidget {
     required this.showDate,
     required this.theatreName,
     required this.showtimeId,
+    this.showtimeKey = '',
+    this.isExternalJsonBooking = false,
+    this.movieId,
     this.selectedFormat = '2D',
     this.selectedLanguage = 'English',
     this.ticketPrice = 750.0,
@@ -51,7 +59,8 @@ class _BookingScreenState extends State<BookingScreen> {
       widget.theatreName,
       widget.showDate,
       widget.showtime,
-      showtimeId: widget.showtimeId,
+      showtimeId: widget.isExternalJsonBooking ? null : widget.showtimeId,
+      isExternalJsonShowtime: widget.isExternalJsonBooking,
     );
     setState(() {
       _bookedSeats = seats.toSet();
@@ -435,6 +444,10 @@ class _BookingScreenState extends State<BookingScreen> {
                                     showDate: widget.showDate,
                                     showTime: widget.showtime,
                                     showtimeId: widget.showtimeId,
+                                    showtimeKey: widget.showtimeKey,
+                                    isExternalJsonBooking:
+                                        widget.isExternalJsonBooking,
+                                    movieId: widget.movieId,
                                     ticketCount: _selectedSeats.length,
                                     amount: total.toStringAsFixed(2),
                                     selectedSeats: _selectedSeats.toList(),

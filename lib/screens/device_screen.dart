@@ -10,6 +10,7 @@ import '../providers/connectivity_provider.dart';
 import '../providers/movie_provider.dart';
 import '../services/api_service.dart';
 import '../services/device_service.dart';
+import '../services/local_db_service.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/cinematic_background.dart';
 
@@ -40,6 +41,10 @@ class _DeviceScreenState extends State<DeviceScreen> {
   String? _apiTestResult;
   bool? _apiTestOk;
 
+  int _sqliteBookingsCount = 0;
+  int _sqliteFavoritesCount = 0;
+  int _sqliteCachedMoviesCount = 0;
+
   bool? _lastLoggedOnline;
   int? _lastLoggedFavoriteCount;
   ConnectivityProvider? _connectivityForLogListener;
@@ -49,6 +54,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
   void initState() {
     super.initState();
     _refreshBattery();
+    _loadSqliteStats();
     _batterySub = DeviceService.batteryStateStream().listen(
       (_) => _refreshBattery(),
     );
@@ -98,6 +104,22 @@ class _DeviceScreenState extends State<DeviceScreen> {
   Future<void> _refreshBattery() async {
     final info = await DeviceService.getBattery();
     if (mounted) setState(() => _battery = info);
+  }
+
+  Future<void> _loadSqliteStats() async {
+    final bookings = await LocalDbService.countAllBookings();
+    final favorites = (await LocalDbService.getFavorites()).length;
+    final cachedMovies = await LocalDbService.countCachedMovieRows();
+    if (!mounted) return;
+    setState(() {
+      _sqliteBookingsCount = bookings;
+      _sqliteFavoritesCount = favorites;
+      _sqliteCachedMoviesCount = cachedMovies;
+    });
+    debugPrint(
+      '🗄️ DEVICE SQLITE - bookings=$bookings favourites=$favorites '
+      'cachedMovies=$cachedMovies',
+    );
   }
 
   void _applyCoordinates(
@@ -370,6 +392,28 @@ class _DeviceScreenState extends State<DeviceScreen> {
                     fontSize: 11,
                     color: muted,
                     height: 1.35,
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+            _sectionTitle('SQLite storage'),
+            _card(
+              icon: Icons.storage_rounded,
+              iconColor: Theme.of(context).colorScheme.primary,
+              title: 'Local database stats',
+              subtitle:
+                  'Bookings $_sqliteBookingsCount · Favourites $_sqliteFavoritesCount · Cached movies $_sqliteCachedMoviesCount',
+              child: Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Text(
+                  'SQLite bookings: external JSON / offline demo only.\n'
+                  'Laravel API remains authoritative for API bookings.',
+                  style: GoogleFonts.outfit(
+                    fontSize: 11,
+                    color: muted,
+                    height: 1.45,
                   ),
                 ),
               ),
